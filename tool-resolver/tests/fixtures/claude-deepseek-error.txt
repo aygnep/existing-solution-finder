@@ -1,0 +1,19 @@
+Claude Code 用 OpenCode Go 跑 DeepSeek 报 reasoning_content 错误。
+
+错误日志：
+error: Unexpected field "reasoning_content" in response from DeepSeek API
+  at parseResponse (src/api/client.ts:142:11)
+  at async processCompletion (src/core/engine.ts:89:22)
+
+环境：
+- Claude Code v1.2.3
+- OpenCode Go v0.8.1
+- DeepSeek API (deepseek-reasoner model)
+- Node.js 20
+- macOS 14.5
+
+重现步骤：
+1. 配置 OpenCode Go 作为 Claude Code 的 API proxy
+2. 将后端切换到 DeepSeek deepseek-reasoner
+3. 发送任意 prompt
+4. 响应中包含 reasoning_content 字段，Claude Code 无法解析

@@ -1,0 +1,32 @@
+docker-compose up 启动后，app 容器无法连接 postgres 容器。
+
+ERROR: connect ECONNREFUSED 172.18.0.2:5432
+    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1595:16) {
+  errno: -111,
+  code: 'ECONNREFUSED',
+  syscall: 'connect',
+  address: '172.18.0.2',
+  port: 5432
+}
+
+docker-compose.yml:
+  app:
+    build: .
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://user:pass@db:5432/mydb
+
+  db:
+    image: postgres:16
+    ports:
+      - "5432:5432"
+
+已尝试：
+- docker network inspect bridge — 两个容器在同一网络
+- ping db — 在 app 容器内可以 ping 通
+- telnet db 5432 — connection refused
+- PostgreSQL 日志显示 "database system is ready to accept connections"
+
+怀疑是时序问题，depends_on 不等待 postgres 就绪。
+需要 open source 的解决方案，must be self-hosted。

@@ -1,0 +1,69 @@
+开发里程碑
+
+## Milestone 1：本地 CLI + mock 数据
+
+目标：
+
+```bash
+tool-resolver ask "Claude Code DeepSeek reasoning_content error"
+```
+
+能输出 mock 的 `oc-go-cc` 排名。
+
+完成模块：
+
+```text
+problem-parser
+query-generator
+scorer
+cli
+tests
+```
+
+---
+
+## Milestone 2：接 GitHub Repo Search
+
+真实搜索 GitHub repo 和 README。
+
+完成：
+
+```text
+GitHub token 支持
+repo search
+README fetch
+basic rate limit handling
+```
+
+---
+
+## Milestone 3：接 GitHub Issues
+
+支持找别人遇到的相同错误。
+
+输出：
+
+```text
+Related issues:
+- cc-switch #2365: DeepSeek reasoning_content error
+```
+
+---
+
+## Milestone 4：加入 LLM 总结
+
+LLM 只负责：
+
+```text
+总结 README
+解释为什么匹配
+生成使用建议
+```
+
+不要让 LLM 负责原始搜索和打分。
+
+---
+
+## Milestone 5：Web UI
+
+等 CLI 稳定后再做。

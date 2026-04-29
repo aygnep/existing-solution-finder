@@ -1,0 +1,30 @@
+npm ERR! code ERESOLVE
+npm ERR! ERESOLVE unable to resolve dependency tree
+npm ERR! 
+npm ERR! While resolving: my-app@1.0.0
+npm ERR! Found: react@18.2.0
+npm ERR! node_modules/react
+npm ERR!   react@"^18.2.0" from the root project
+npm ERR! 
+npm ERR! Could not resolve dependency:
+npm ERR! peer react@"^17.0.0" from some-old-library@2.3.1
+npm ERR! node_modules/some-old-library
+npm ERR!   some-old-library@"^2.3.0" from the root project
+npm ERR! 
+npm ERR! Fix the upstream dependency conflict, or retry
+npm ERR! this command with --force or --legacy-peer-deps
+
+> my-app@1.0.0 build
+> next build
+
+Failed to compile.
+
+./src/pages/index.tsx:15:7
+Type error: Property 'data' does not exist on type 'never'.
+
+  13 |   const result = useQuery();
+  14 |   
+> 15 |   if (result.data) {
+     |       ^
+  16 |     return <div>{result.data.name}</div>
+  17 |   }
