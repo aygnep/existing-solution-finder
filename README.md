@@ -40,6 +40,56 @@ npm run typecheck # TypeScript check
 
 See `docs/ARCHITECTURE.md` for full design.
 
+## Project Structure / 目录结构
+
+```
+existing-solution-finder/
+├── .env.example
+├── .gitignore
+├── README.md
+├── jest.config.js
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── docs/
+│   ├── ARCHITECTURE.md
+│   ├── CLAUDE_CODE_RULES.md
+│   ├── PRODUCT_SPEC.md
+│   ├── SAFETY_RULES.md
+│   ├── SCORING_RULES.md
+│   └── SEARCH_STRATEGY.md
+├── src/
+│   ├── cli/
+│   │   └── index.ts
+│   ├── core/
+│   │   ├── problem-parser.ts
+│   │   ├── query-generator.ts
+│   │   ├── ranker.ts
+│   │   ├── scorer.ts
+│   │   └── summarizer.ts
+│   ├── providers/
+│   │   ├── github-search.ts
+│   │   ├── mock-provider.ts
+│   │   ├── package-search.ts
+│   │   └── web-search.ts
+│   ├── types/
+│   │   ├── candidate.ts
+│   │   ├── problem.ts
+│   │   └── score.ts
+│   └── utils/
+│       ├── env.ts
+│       ├── logger.ts
+│       └── text.ts
+└── tests/
+    ├── fixtures/
+    │   ├── claude-deepseek-error.txt
+    │   ├── docker-network-error.txt
+    │   └── npm-build-error.txt
+    ├── problem-parser.test.ts
+    ├── query-generator.test.ts
+    └── scorer.test.ts
+```
+
 ## Docs
 
 - [Product Spec](docs/PRODUCT_SPEC.md)
