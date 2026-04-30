@@ -5,6 +5,7 @@ import type { ParsedProblem } from '../types/problem.js';
 const KNOWN_TOOLS = [
   'Claude Code',
   'DeepSeek',
+  'OpenCode Go',
   'OpenCode',
   'Docker',
   'Kubernetes',
@@ -31,11 +32,12 @@ const KNOWN_TOOLS = [
 // ─── Regex patterns ───────────────────────────────────────────────────────────
 
 /**
- * Matches quoted error tokens like "reasoning_content", 'ECONNREFUSED',
- * or bare ERROR/WARN/FATAL prefixed lines.
+ * Matches error-prefixed lines.
+ * Requires a colon separator to avoid capturing natural language like "error with Claude Code".
  */
 const ERROR_PATTERN =
-  /(?:error|exception|failed|fatal|warn|ECONNREFUSED|ETIMEDOUT|Cannot|Unexpected|invalid)[:\s]+([^\n]{3,80})/gi;
+  /(?:error|exception|failed|fatal|warn|ECONNREFUSED|ETIMEDOUT|Cannot|Unexpected|invalid):\s*([^\n]{3,80})/gi;
+
 
 /** Matches version strings like "Node.js 20", "Go 1.22", "v3.4.1" */
 const VERSION_PATTERN = /(?:v\d+\.\d+(?:\.\d+)?|\b(?:node|go|python|ruby|java)\s+\d+(?:\.\d+)?)/gi;
@@ -70,7 +72,7 @@ export function parseProblem(input: string): ParsedProblem {
 function extractErrorTokens(text: string): readonly string[] {
   const tokens = new Set<string>();
 
-  // Match error-prefixed lines
+  // Match error-prefixed lines (colon-separated to avoid natural language)
   for (const match of text.matchAll(ERROR_PATTERN)) {
     const token = match[1]?.trim();
     if (token && token.length >= 3) {
@@ -79,7 +81,8 @@ function extractErrorTokens(text: string): readonly string[] {
   }
 
   // Match quoted strings as potential error tokens
-  const quotedPattern = /"([^"]{3,60})"|'([^']{3,60})'/g;
+  // Only capture if they look like identifiers or error codes (no spaces, or short)
+  const quotedPattern = /"([^"\s]{3,40})"|'([^'\s]{3,40})'/g;
   for (const match of text.matchAll(quotedPattern)) {
     const token = (match[1] ?? match[2])?.trim();
     if (token) tokens.add(token);

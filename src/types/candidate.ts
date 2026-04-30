@@ -28,6 +28,10 @@ export interface RawCandidate {
   readonly readmeSnippet?: string;
   readonly provider: Provider;
   readonly metadata: CandidateMetadata;
+  /** Optional type hint from the provider (tool / issue / workaround) */
+  readonly candidateTypeHint?: 'tool' | 'issue' | 'workaround';
+  /** Optional next-step suggestion from the provider */
+  readonly nextStepHint?: string;
 }
 
 /** Metadata used by the scorer. All fields are optional — providers may not have all info. */

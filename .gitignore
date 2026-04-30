@@ -5,3 +5,4 @@ dist/
 *.d.ts
 coverage/
 .DS_Store
+*.txt
