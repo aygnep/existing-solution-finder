@@ -1,17 +1,16 @@
 {
-  "name": "tool-resolver",
+  "name": "fixseek",
   "version": "0.1.0",
-  "description": "CLI tool to find existing solutions for developer problems",
+  "description": "Find existing fixes, tools, GitHub issues, packages, and workarounds before you build from scratch.",
   "main": "dist/cli/index.js",
   "bin": {
-    "tool-resolver": "dist/cli/index.js"
+    "fixseek": "dist/cli/index.js"
   },
   "files": [
     "dist",
     "README.md",
     "README.zh-CN.md",
-    "LICENSE",
-    "package.json"
+    "LICENSE"
   ],
   "scripts": {
     "build": "tsc",
@@ -23,14 +22,28 @@
     "lint": "eslint src tests --ext .ts",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build && npm test && npm run typecheck"
+    "prepare": "npm run build",
+    "prepublishOnly": "npm test && npm run typecheck && npm run build"
   },
   "keywords": [
     "cli",
     "developer-tools",
-    "problem-solver",
-    "github-search"
+    "github-search",
+    "npm-search",
+    "troubleshooting",
+    "debugging",
+    "bugfix",
+    "workaround",
+    "solution-finder"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/aygnep/existing-solution-finder.git"
+  },
+  "bugs": {
+    "url": "https://github.com/aygnep/existing-solution-finder/issues"
+  },
+  "homepage": "https://github.com/aygnep/existing-solution-finder#readme",
   "license": "MIT",
   "dependencies": {
     "commander": "^12.0.0",

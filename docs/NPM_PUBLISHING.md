@@ -1,17 +1,16 @@
-# npm Publishing Checklist
+# Fixseek npm Publishing Checklist
 
-This project is prepared for npm distribution, but publishing is a manual step.
-Do not publish from automation unless a maintainer explicitly requests it.
+Fixseek is prepared for npm distribution, but publishing is a manual maintainer
+action. Do not run `npm publish` from automation.
 
 ## 1. Confirm Package Metadata
 
-- Confirm `package.json` `name`.
-  - Current: `tool-resolver`
-  - Possible alternatives: `existing-solution-finder` or `@aygnep/existing-solution-finder`
-- Confirm `version`.
-- Confirm `license`.
-- Confirm `bin.tool-resolver` points to `dist/cli/index.js`.
-- Confirm `files` only includes publishable artifacts.
+- `package.json` `name`: `fixseek`
+- `version`: `0.1.0`
+- `license`: `MIT`
+- `bin.fixseek`: `dist/cli/index.js`
+- Repository metadata still points to `aygnep/existing-solution-finder`.
+- Published files are controlled by `package.json` `files`.
 
 ## 2. Login
 
@@ -25,13 +24,15 @@ npm login
 npm run prepublishOnly
 ```
 
+This runs tests, typecheck, and build.
+
 ## 4. Inspect Package Contents
 
 ```bash
-npm pack --dry-run
+npm publish --dry-run
 ```
 
-Check that the package includes only expected files:
+Check that the package includes the expected files:
 
 - `dist`
 - `README.md`
@@ -47,18 +48,13 @@ Only run this when you intentionally want to publish:
 npm publish
 ```
 
-For scoped packages, the first public publish may need:
-
-```bash
-npm publish --access public
-```
-
 ## 6. Verify Global Install
 
 ```bash
-npm install -g <package-name>
-tool-resolver --help
-tool-resolver solve "reasoning_content error with Claude Code"
+npm install -g fixseek
+fixseek --help
+fixseek "reasoning_content error with Claude Code"
+fixseek solve "npm package ESM CommonJS error"
 ```
 
 ## Safety Notes

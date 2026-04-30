@@ -53,7 +53,7 @@ export function summarize(
   const lines: string[] = [
     '',
     '═'.repeat(60),
-    `  Tool Resolver — ${t(lang, 'topMatches')}`,
+    `  Fixseek — ${t(lang, 'topMatches')}`,
     '─'.repeat(60),
     `  ${t(lang, 'problem')}: ${truncate(problem.raw, 80)}`,
     problem.stackNames.length > 0

@@ -14,7 +14,7 @@ const PREFIXES: Record<LogLevel, string> = {
   error: '[ERROR]',
 };
 
-let currentLevel: LogLevel = 'info';
+let currentLevel: LogLevel = 'warn';
 
 export const logger = {
   setLevel(level: LogLevel): void {

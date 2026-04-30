@@ -1,116 +1,110 @@
-# Existing Solution Finder
+# Fixseek
 
-Turn error logs and developer problems into existing solution candidates.
+Find existing fixes, tools, GitHub issues, packages, and workarounds before you build from scratch.
 
-Existing Solution Finder is a local CLI that helps you turn a raw error log or
-problem description into ranked candidates: tools, GitHub projects, issues, and
-workarounds that may already solve the problem.
+[中文文档](./README.zh-CN.md)
 
-Language: **English** | [中文文档](README.zh-CN.md)
+## Why Fixseek?
 
-## What It Does
+When developers hit an error, integration problem, CLI failure, dependency issue,
+or tooling gap, the first instinct is often to ask AI or debug from zero.
+Fixseek takes a different first step: search for signs that someone has already
+solved it.
 
-- Extracts useful keywords from error logs and problem descriptions.
-- Generates search queries from error tokens, stack names, and constraints.
-- Searches candidate tools, GitHub projects, issues, and workarounds.
-- Scores and ranks candidates by fit, evidence, recency, and safety signals.
-- Prints match reasons, risks, and recommended next steps.
+It turns an error log or problem description into ranked candidates: existing
+GitHub projects, GitHub issues, npm packages, workarounds, docs, and related
+tools. You still review the result; Fixseek helps you avoid missing the obvious
+existing fix before you build one yourself.
 
-## What It Does Not Do
-
-- It does not automatically install tools.
-- It does not automatically execute unknown code.
-- It does not guarantee every result is correct.
-- It does not replace human review.
-- It does not automatically fix every error.
-
-## Installation From Source
+## Installation
 
 ```bash
-git clone <repo-url>
-cd existing-solution-finder
-npm install
-npm run build
-npm start -- solve "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
+npm install -g fixseek
 ```
 
-## Mock Mode
-
-Mock mode is the default. It uses built-in fixture candidates, does not call real
-network APIs, and does not require an API key.
+## Quick Start
 
 ```bash
-npm start -- solve "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
+fixseek "Claude Code DeepSeek reasoning_content error"
+
+cat error.log | fixseek --stdin
+
+fixseek --stack "Node.js,Docker" "container networking issue"
 ```
 
-## Real GitHub Mode
+Mock mode is the default and does not require an API key.
 
-Real GitHub mode searches GitHub through the GitHub API. It requires
-`GITHUB_TOKEN`.
+## Usage
 
 ```bash
-cp .env.example .env
-# Edit .env and set GITHUB_TOKEN.
+# Direct query, recommended
+fixseek "reasoning_content error with Claude Code + DeepSeek"
 
-npm start -- solve --real --provider github "reasoning_content error with Claude Code"
+# Read a log from stdin
+cat error.log | fixseek --stdin
+
+# Compatibility subcommand
+fixseek solve "npm package ESM CommonJS error"
+
+# Limit results
+fixseek --max-results 5 "vite module not found"
+
+# Add stack context
+fixseek --stack "Node.js,Docker" "container networking issue"
+
+# Chinese or English output labels
+fixseek --lang zh "Claude Code + DeepSeek reasoning_content 报错"
+fixseek --lang en "reasoning_content error with Claude Code"
+
+# Quiet or verbose logs
+fixseek --log-level warn "dependency resolution error"
+fixseek --log-level debug "dependency resolution error"
+
+# Real GitHub search
+fixseek --real --provider github "vite module not found"
 ```
 
-## CLI Examples
+Supported providers are `github`, `web`, and `npm`. Real GitHub mode requires
+`GITHUB_TOKEN`; mock mode does not.
+
+## Examples
 
 ```bash
-# Plain input
-npm start -- solve "reasoning_content error with Claude Code"
+fixseek "TypeError fetch failed Node.js proxy"
 
-# Read from stdin
-printf '%s\n' "reasoning_content error with Claude Code" | npm start -- solve --stdin
+fixseek "vite module not found after pnpm install"
 
-# Limit result count
-npm start -- solve --max-results 3 "Claude Code DeepSeek proxy"
+fixseek --stack "React,Vite,TypeScript" "Cannot find module vite/client"
 
-# Chinese output labels
-npm start -- solve --lang zh "Claude Code + DeepSeek reasoning_content 报错"
+fixseek --provider npm "ESM CommonJS interop package error"
 
-# English output labels
-npm start -- solve --lang en "reasoning_content error with Claude Code"
+fixseek --real --provider github "Docker host.docker.internal connection refused"
 
-# Change log level
-npm start -- solve --log-level debug "Claude Code DeepSeek proxy"
-
-# Real GitHub provider
-npm start -- solve --real --provider github "reasoning_content error with Claude Code"
+cat ./error.log | fixseek --stdin --max-results 5
 ```
 
-## Environment Variables
+## Configuration
 
-Copy `.env.example` to `.env` for local real-provider usage.
+Copy `.env.example` to `.env` when you want real providers.
 
 | Variable | Purpose |
 | --- | --- |
-| `GITHUB_TOKEN` | GitHub Personal Access Token for `--real --provider github`. Not needed in mock mode. |
-| `WEB_SEARCH_PROVIDER` | Optional web search provider, currently `brave` or `serpapi`. |
-| `WEB_SEARCH_API_KEY` | Optional API key for the configured web search provider. |
-| `LOG_LEVEL` | Log level: `debug`, `info`, `warn`, or `error`. Default: `info`. |
+| `GITHUB_TOKEN` | GitHub token for `--real --provider github`. Not needed in mock mode. |
+| `WEB_SEARCH_PROVIDER` | Optional web search provider: `brave` or `serpapi`. |
+| `WEB_SEARCH_API_KEY` | API key for the configured web search provider. |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, or `error`. Default: `warn`. |
 | `MAX_RESULTS_PER_PROVIDER` | Max results requested per provider. Default: `10`. |
 | `REQUEST_TIMEOUT_MS` | Request timeout in milliseconds. Default: `10000`. |
 
-Do not commit `.env` or any real token.
+Do not commit `.env` or real tokens.
 
-## npm Distribution
+## What Fixseek Does Not Do
 
-Ready for npm publish preparation, but not published yet. The current package
-name is `tool-resolver`; before publishing, consider whether the npm name should
-match the product/repository name, for example `existing-solution-finder` or
-`@aygnep/existing-solution-finder`.
-
-Future global install flow:
-
-```bash
-npm install -g <package-name>
-tool-resolver solve "reasoning_content error with Claude Code"
-```
-
-See [docs/NPM_PUBLISHING.md](docs/NPM_PUBLISHING.md) for the pre-publish
-checklist.
+- It does not automatically install tools.
+- It does not automatically clone repositories.
+- It does not execute unknown scripts or search-result commands.
+- It does not guarantee that a result is correct or safe.
+- It does not replace human review.
 
 ## Development
 
@@ -119,33 +113,22 @@ npm install
 npm run build
 npm test
 npm run typecheck
-npm run clean
 ```
 
-## Safety Boundaries
+The GitHub repository is currently:
+[aygnep/existing-solution-finder](https://github.com/aygnep/existing-solution-finder).
+The product name is Fixseek; the repository may be renamed later.
 
-Existing Solution Finder is designed to inform, not decide. It never
-automatically runs commands from search results, clones repositories, installs
-packages, or executes unknown scripts. Review every candidate and command before
-using it.
+## Publishing
 
-## Docs
+Publishing is manual. Do not run `npm publish` unless you intend to publish a
+new package version.
 
-- [Product Spec](docs/PRODUCT_SPEC.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Search Strategy](docs/SEARCH_STRATEGY.md)
-- [Scoring Rules](docs/SCORING_RULES.md)
-- [Safety Rules](docs/SAFETY_RULES.md)
-- [Claude Code Rules](docs/CLAUDE_CODE_RULES.md)
-- [npm Publishing](docs/NPM_PUBLISHING.md)
-
-## Roadmap
-
-- Better Chinese output
-- GitHub Issues search
-- npm / package registry search improvements
-- Better evidence extraction
-- More real-world fixtures
+```bash
+npm run prepublishOnly
+npm publish --dry-run
+npm publish
+```
 
 ## License
 

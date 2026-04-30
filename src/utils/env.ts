@@ -13,7 +13,7 @@ const envSchema = z.object({
     z.enum(['brave', 'serpapi']).optional(),
   ),
   WEB_SEARCH_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('warn'),
   MAX_RESULTS_PER_PROVIDER: z.coerce.number().int().positive().default(10),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
 });

@@ -12,186 +12,271 @@ import type { Provider, RawCandidate } from '../types/candidate.js';
 import type { Language } from '../i18n/types.js';
 
 const VALID_PROVIDERS: readonly Provider[] = ['github', 'web', 'npm'];
+const DESCRIPTION =
+  'Fixseek helps you find existing fixes, tools, GitHub issues, packages, and workarounds before you build from scratch.';
 
-const program = new Command();
+export interface CliOptions {
+  readonly stdin?: boolean;
+  readonly maxResults: string;
+  readonly mock?: boolean;
+  readonly real?: boolean;
+  readonly provider?: string;
+  readonly stack?: string;
+  readonly lang?: string;
+  readonly logLevel: string;
+}
 
-program
-  .name('tool-resolver')
-  .description('Find existing tools and projects that solve your technical problem')
-  .version('0.1.0');
+export interface CliIo {
+  readonly stdin: NodeJS.ReadableStream;
+  readonly stdout: NodeJS.WritableStream;
+  readonly stderr: NodeJS.WritableStream;
+}
 
-program
-  .command('solve [problem]', { isDefault: true })
-  .description('Analyze a problem and find matching tools')
-  .option('--stdin', 'Read problem from stdin instead of argument')
-  .option('--max-results <n>', 'Maximum results to show', '10')
-  .option('--mock', 'Use mock provider (default, no API calls)')
-  .option('--real', 'Use real providers (requires API keys)')
-  .option('--provider <name>', 'Limit to specific provider: github | web | npm')
-  .option('--lang <lang>', 'Output language: en | zh', 'en')
-  .option('--log-level <level>', 'Log level: debug | info | warn | error', 'info')
-  .action(async (problemArg: string | undefined, options: {
-    stdin?: boolean;
-    maxResults: string;
-    mock?: boolean;
-    real?: boolean;
-    provider?: string;
-    lang?: string;
-    logLevel: string;
-  }) => {
-    let lang: Language;
-    try {
-      lang = parseLanguage(options.lang);
-    } catch (err) {
-      process.stderr.write(String((err as Error).message) + '\n');
-      process.exit(1);
-    }
+const DEFAULT_OPTIONS: CliOptions = {
+  maxResults: '10',
+  lang: 'en',
+  logLevel: 'warn',
+};
 
-    logger.setLevel(options.logLevel as 'debug' | 'info' | 'warn' | 'error');
+export function createProgram(io: CliIo = defaultIo()): Command {
+  const program = new Command();
 
-    // Collect problem input
-    let problemText = problemArg ?? '';
-    if (options.stdin) {
-      logger.info(t(lang, 'readingFromStdin'));
-      problemText = await readStdin();
-    }
-
-    if (!problemText?.trim()) {
-      process.stderr.write(`${t(lang, 'error')}: ${t(lang, 'inputRequired')}.\n`);
-      process.exit(1);
-    }
-
-    // Resolve mode: --real takes precedence; default is mock
-    const useReal = options.real === true;
-    const useMock = !useReal;
-
-    // Validate --provider value
-    let selectedProvider: Provider | undefined;
-    if (options.provider) {
-      const normalized = options.provider.toLowerCase();
-      if (!VALID_PROVIDERS.includes(normalized as Provider)) {
-        process.stderr.write(
-          `${t(lang, 'error')}: ${t(lang, 'unsupportedProvider')} "${options.provider}". Valid options: github, web, npm.\n`,
-        );
-        process.exit(1);
-      }
-      selectedProvider = normalized as Provider;
-    }
-
-    logger.info('Analyzing problem...', { length: problemText.length });
-
-    // 1. Parse
-    const problem = parseProblem(problemText);
-    logger.debug('Parsed problem', {
-      errorTokens: problem.errorTokens.length,
-      stackNames: problem.stackNames.length,
-      keywords: problem.keywords.length,
+  program
+    .name('fixseek')
+    .description(DESCRIPTION)
+    .version('0.1.0')
+    .argument('[problem...]', 'Problem description, error message, or keywords')
+    .allowExcessArguments(false)
+    .showHelpAfterError()
+    .addHelpText('after', helpExamples())
+    .action(async (problemParts: readonly string[] = [], options: CliOptions) => {
+      process.exitCode = await runSolve(problemParts, normalizeOptions(options), io);
     });
 
-    // 2. Generate queries
-    const queries = generateQueries(problem);
-    logger.info(`Generated ${queries.length} queries`);
+  addSolveOptions(program);
 
-    // 3. Search
-    let allCandidates: RawCandidate[];
-
-    if (useMock) {
-      logger.info(t(lang, 'mockMode') + ' (no real API calls)');
-      const mockSearch = createMockProvider(getBuiltinMockCandidates());
-      const results = await Promise.all(queries.map((q) => mockSearch(q)));
-      allCandidates = results.flat();
-    } else {
-      // Real provider path — validate environment
-      const { loadEnv } = await import('../utils/env.js');
-
-      let env;
-      try {
-        env = loadEnv();
-      } catch (err) {
-        process.stderr.write(String(err) + '\n');
-        process.exit(1);
-      }
-
-      // If --real is used and github is needed, GITHUB_TOKEN must be present
-      const needsGitHub =
-        !selectedProvider || selectedProvider === 'github';
-      if (needsGitHub && !env.GITHUB_TOKEN) {
-        process.stderr.write(
-          `${t(lang, 'error')}: ${t(lang, 'missingGithubToken')}.\n` +
-            'Create a token at https://github.com/settings/tokens (scope: public_repo)\n' +
-            'Then run: GITHUB_TOKEN=your_token npm start -- solve --real "your problem"\n',
-        );
-        process.exit(1);
-      }
-
-      const { searchGitHubMultiQuery } = await import('../providers/github-search.js');
-      const { searchWeb } = await import('../providers/web-search.js');
-      const { searchPackages } = await import('../providers/package-search.js');
-
-      allCandidates = [];
-
-      // GitHub: use multi-query search with built-in deduplication
-      if (!selectedProvider || selectedProvider === 'github') {
-        const githubQueries = queries.filter((q) => q.providers.includes('github'));
-        try {
-          const githubResults = await searchGitHubMultiQuery(githubQueries, env);
-          allCandidates.push(...githubResults);
-        } catch (err: unknown) {
-          logger.warn('GitHub search failed', { error: String(err) });
-        }
-      }
-
-      // Web and npm: per-query search
-      const otherPromises = queries.flatMap((query) => {
-        const promises: Promise<void>[] = [];
-
-        if (query.providers.includes('web') && (!selectedProvider || selectedProvider === 'web')) {
-          promises.push(
-            searchWeb(query, env).then((results) => {
-              allCandidates.push(...results);
-            }).catch((err: unknown) => {
-              logger.warn('Web search failed', { error: String(err) });
-            }),
-          );
-        }
-        if (query.providers.includes('npm') && (!selectedProvider || selectedProvider === 'npm')) {
-          promises.push(
-            searchPackages(query, env).then((results) => {
-              allCandidates.push(...results);
-            }).catch((err: unknown) => {
-              logger.warn('npm search failed', { error: String(err) });
-            }),
-          );
-        }
-        return promises;
-      });
-      await Promise.all(otherPromises);
-    }
-
-    logger.info(`Found ${allCandidates.length} raw candidates`);
-
-    // 4. Score
-    const scored = allCandidates.map((c) => scoreAndAttach(c, problem));
-
-    // 5. Rank
-    const ranked = rankCandidates(scored, {
-      maxResults: parseInt(options.maxResults, 10),
+  const solve = program
+    .command('solve')
+    .description('Compatibility command. Same as running fixseek "problem".')
+    .argument('[problem...]', 'Problem description, error message, or keywords')
+    .allowExcessArguments(false)
+    .showHelpAfterError()
+    .addHelpText('after', helpExamples())
+    .action(async (problemParts: readonly string[] = [], options: CliOptions) => {
+      process.exitCode = await runSolve(problemParts, normalizeOptions(options), io);
     });
 
-    // 6. Output
-    const output = summarize(ranked, problem, { lang });
-    process.stdout.write(output);
+  addSolveOptions(solve);
+
+  return program;
+}
+
+export async function runSolve(
+  problemParts: readonly string[],
+  options: CliOptions,
+  io: CliIo = defaultIo(),
+): Promise<number> {
+  let lang: Language;
+  try {
+    lang = parseLanguage(options.lang);
+  } catch (err) {
+    io.stderr.write(String((err as Error).message) + '\n');
+    return 1;
+  }
+
+  logger.setLevel(options.logLevel as 'debug' | 'info' | 'warn' | 'error');
+
+  let problemText = problemParts.join(' ').trim();
+  if (options.stdin) {
+    logger.info(t(lang, 'readingFromStdin'));
+    problemText = (await readStdin(io.stdin)).trim();
+  }
+
+  problemText = appendStackContext(problemText, options.stack);
+
+  if (!problemText.trim()) {
+    io.stderr.write(`${t(lang, 'error')}: ${t(lang, 'inputRequired')}.\n`);
+    return 1;
+  }
+
+  const useReal = options.real === true;
+  const useMock = !useReal;
+
+  let selectedProvider: Provider | undefined;
+  if (options.provider) {
+    const normalized = options.provider.toLowerCase();
+    if (!VALID_PROVIDERS.includes(normalized as Provider)) {
+      io.stderr.write(
+        `${t(lang, 'error')}: ${t(lang, 'unsupportedProvider')} "${options.provider}". Valid options: github, web, npm.\n`,
+      );
+      return 1;
+    }
+    selectedProvider = normalized as Provider;
+  }
+
+  logger.info('Analyzing problem...', { length: problemText.length });
+
+  const problem = parseProblem(problemText);
+  logger.debug('Parsed problem', {
+    errorTokens: problem.errorTokens.length,
+    stackNames: problem.stackNames.length,
+    keywords: problem.keywords.length,
   });
 
-program.parse();
+  const queries = generateQueries(problem);
+  logger.info(`Generated ${queries.length} queries`);
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+  let allCandidates: RawCandidate[];
 
-async function readStdin(): Promise<string> {
+  if (useMock) {
+    logger.info(t(lang, 'mockMode') + ' (no real API calls)');
+    const mockSearch = createMockProvider(getBuiltinMockCandidates());
+    const results = await Promise.all(queries.map((q) => mockSearch(q)));
+    allCandidates = results.flat();
+  } else {
+    allCandidates = await searchRealProviders(queries, selectedProvider, lang, io);
+    if (allCandidates.length === 0 && process.exitCode === 1) return 1;
+  }
+
+  logger.info(`Found ${allCandidates.length} raw candidates`);
+
+  const scored = allCandidates.map((c) => scoreAndAttach(c, problem));
+  const ranked = rankCandidates(scored, {
+    maxResults: parseInt(options.maxResults, 10),
+  });
+
+  io.stdout.write(summarize(ranked, problem, { lang }));
+  return 0;
+}
+
+async function searchRealProviders(
+  queries: ReturnType<typeof generateQueries>,
+  selectedProvider: Provider | undefined,
+  lang: Language,
+  io: CliIo,
+): Promise<RawCandidate[]> {
+  const { loadEnv } = await import('../utils/env.js');
+
+  let env;
+  try {
+    env = loadEnv();
+  } catch (err) {
+    io.stderr.write(String(err) + '\n');
+    process.exitCode = 1;
+    return [];
+  }
+
+  const needsGitHub = !selectedProvider || selectedProvider === 'github';
+  if (needsGitHub && !env.GITHUB_TOKEN) {
+    io.stderr.write(
+      `${t(lang, 'error')}: ${t(lang, 'missingGithubToken')}.\n` +
+        'Create a token at https://github.com/settings/tokens (scope: public_repo)\n' +
+        'Then run: GITHUB_TOKEN=your_token fixseek --real "your problem"\n',
+    );
+    process.exitCode = 1;
+    return [];
+  }
+
+  const { searchGitHubMultiQuery } = await import('../providers/github-search.js');
+  const { searchWeb } = await import('../providers/web-search.js');
+  const { searchPackages } = await import('../providers/package-search.js');
+  const allCandidates: RawCandidate[] = [];
+
+  if (!selectedProvider || selectedProvider === 'github') {
+    const githubQueries = queries.filter((q) => q.providers.includes('github'));
+    try {
+      allCandidates.push(...await searchGitHubMultiQuery(githubQueries, env));
+    } catch (err: unknown) {
+      logger.warn('GitHub search failed', { error: String(err) });
+    }
+  }
+
+  const otherPromises = queries.flatMap((query) => {
+    const promises: Promise<void>[] = [];
+
+    if (query.providers.includes('web') && (!selectedProvider || selectedProvider === 'web')) {
+      promises.push(
+        searchWeb(query, env).then((results) => {
+          allCandidates.push(...results);
+        }).catch((err: unknown) => {
+          logger.warn('Web search failed', { error: String(err) });
+        }),
+      );
+    }
+    if (query.providers.includes('npm') && (!selectedProvider || selectedProvider === 'npm')) {
+      promises.push(
+        searchPackages(query, env).then((results) => {
+          allCandidates.push(...results);
+        }).catch((err: unknown) => {
+          logger.warn('npm search failed', { error: String(err) });
+        }),
+      );
+    }
+    return promises;
+  });
+
+  await Promise.all(otherPromises);
+  return allCandidates;
+}
+
+function addSolveOptions(command: Command): void {
+  command
+    .option('--stdin', 'Read problem from stdin instead of an argument')
+    .option('--max-results <n>', 'Maximum results to show', '10')
+    .option('--mock', 'Use mock provider (default, no API calls)')
+    .option('--real', 'Use real providers (requires API keys)')
+    .option('--provider <name>', 'Limit to a provider: github | web | npm')
+    .option('--stack <list>', 'Comma-separated stack context, e.g. "Node.js,Docker"')
+    .option('--lang <lang>', 'Output language: en | zh', 'en')
+    .option('--log-level <level>', 'Log level: debug | info | warn | error', 'warn');
+}
+
+function normalizeOptions(options: CliOptions): CliOptions {
+  return { ...DEFAULT_OPTIONS, ...options };
+}
+
+function appendStackContext(problemText: string, stack: string | undefined): string {
+  if (!stack?.trim()) return problemText;
+  const normalizedStack = stack
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(', ');
+
+  if (!normalizedStack) return problemText;
+  return [problemText, `Stack: ${normalizedStack}`].filter(Boolean).join('\n');
+}
+
+function helpExamples(): string {
+  return `
+Examples:
+  fixseek "reasoning_content error with Claude Code + DeepSeek"
+  cat error.log | fixseek --stdin
+  fixseek --real --provider github "vite module not found"
+  fixseek --stack "Node.js,Docker" "container networking issue"
+  fixseek solve "npm package ESM CommonJS error"
+
+Default usage does not require the solve command; solve is kept for compatibility.
+`;
+}
+
+function defaultIo(): CliIo {
+  return {
+    stdin: process.stdin,
+    stdout: process.stdout,
+    stderr: process.stderr,
+  };
+}
+
+async function readStdin(stdin: NodeJS.ReadableStream): Promise<string> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
-    process.stdin.on('data', (chunk: Buffer) => chunks.push(chunk));
-    process.stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
-    process.stdin.resume();
+    stdin.on('data', (chunk: Buffer) => chunks.push(chunk));
+    stdin.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    stdin.resume();
   });
+}
+
+if (require.main === module) {
+  void createProgram().parseAsync(process.argv);
 }
