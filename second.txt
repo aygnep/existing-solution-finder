@@ -1,0 +1,437 @@
+是的，**强烈建议先写文档规定路径和边界**，尤其你要用 Claude Code 开发。因为 Claude Code 很容易“主动发挥”：乱建目录、改架构、引入不必要依赖、把 MVP 写成大工程。
+
+你这个项目最适合先做成：
+
+> **输入错误日志 / 问题描述 → 自动生成搜索查询 → 搜索已有工具 → 打分排序 → 给出推荐方案**
+
+先别一上来做浏览器插件、全自动 agent、复杂数据库。先做一个 CLI 或 Web 小工具。
+
+---
+
+# 一、推荐开发顺序
+
+---
+
+# 二、项目目录建议
+
+我建议用 Python 或 TypeScript。你如果主要用 Claude Code，**TypeScript 更适合做 CLI + 后续 Web**。
+
+目录可以这样：
+
+```text
+tool-resolver/
+  README.md
+  package.json
+  tsconfig.json
+  .env.example
+
+  docs/
+    PRODUCT_SPEC.md
+    ARCHITECTURE.md
+    SEARCH_STRATEGY.md
+    SCORING_RULES.md
+    SAFETY_RULES.md
+    CLAUDE_CODE_RULES.md
+
+  src/
+    cli/
+      index.ts
+
+    core/
+      problem-parser.ts
+      query-generator.ts
+      scorer.ts
+      ranker.ts
+      summarizer.ts
+
+    providers/
+      github-search.ts
+      web-search.ts
+      package-search.ts
+
+    types/
+      problem.ts
+      candidate.ts
+      score.ts
+
+    utils/
+      text.ts
+      logger.ts
+      env.ts
+
+  tests/
+    fixtures/
+      claude-deepseek-error.txt
+      npm-build-error.txt
+      docker-network-error.txt
+
+    problem-parser.test.ts
+    query-generator.test.ts
+    scorer.test.ts
+```
+
+---
+
+# 三、你应该先写的文档内容
+
+## 1. `PRODUCT_SPEC.md`
+
+写清楚产品做什么、不做什么。
+
+示例：
+
+```md
+# Product Spec
+
+## Goal
+
+Help developers find existing tools, GitHub projects, issues, and workarounds that can solve their current technical problem.
+
+## Input
+
+- Error logs
+- Natural language problem descriptions
+- Tech stack descriptions
+- Constraints
+
+## Output
+
+- Ranked candidate tools
+- Why each tool matches
+- Risks
+- Installation links
+- Suggested next steps
+
+## Non-goals
+
+- Do not automatically install unknown tools.
+- Do not run arbitrary code from GitHub.
+- Do not expose API keys.
+- Do not claim a tool is safe without evidence.
+```
+
+---
+
+## 2. `SEARCH_STRATEGY.md`
+
+规定搜索怎么做。
+
+```md
+# Search Strategy
+
+For each problem, generate queries in five categories:
+
+1. Exact error queries
+2. Stack compatibility queries
+3. GitHub repository queries
+4. GitHub issue queries
+5. Alternative solution queries
+
+Example:
+
+Input:
+"Claude Code + OpenCode Go + DeepSeek reasoning_content error"
+
+Queries:
+- "reasoning_content" "Claude Code"
+- "OpenCode Go" "Claude Code" proxy
+- "DeepSeek" "reasoning_content" "Anthropic"
+- site:github.com "Claude Code" "OpenAI compatible"
+```
+
+---
+
+## 3. `SCORING_RULES.md`
+
+这个必须写，避免 Claude Code 后面乱改评分逻辑。
+
+```md
+# Scoring Rules
+
+Candidate score is based on:
+
+- Exact error match: 0-25
+- Stack match: 0-20
+- README evidence: 0-15
+- Recency: 0-10
+- Installation clarity: 0-10
+- Maintenance activity: 0-10
+- Example config: 0-10
+
+Penalties:
+
+- No README: -10
+- No license: -5
+- Archived repo: -30
+- Suspicious install script: -30
+- Requires sending secrets to unknown server: -30
+```
+
+---
+
+## 4. `SAFETY_RULES.md`
+
+这个很重要。
+
+你的项目会推荐别人运行 GitHub 工具，必须有安全边界。
+
+```md
+# Safety Rules
+
+The system must not:
+- Execute downloaded code automatically.
+- Recommend pasting secrets into unknown websites.
+- Hide risks.
+- Mark a project as trusted solely because it has many stars.
+- Suggest disabling security protections unless clearly justified.
+
+The system should:
+- Warn about new or low-star projects.
+- Check license, recent commits, open issues.
+- Prefer official docs when available.
+- Distinguish "likely useful" from "verified safe".
+```
+
+---
+
+## 5. `CLAUDE_CODE_RULES.md`
+
+专门约束 Claude Code。
+
+```md
+# Claude Code Development Rules
+
+Claude Code must:
+
+- Read PRODUCT_SPEC.md before making changes.
+- Keep MVP small.
+- Do not introduce frontend unless requested.
+- Do not add databases in MVP.
+- Do not add authentication in MVP.
+- Prefer pure functions in core modules.
+- Add tests for parser, query generator, and scorer.
+- Never commit API keys.
+- Never hardcode tokens.
+- Update docs when behavior changes.
+```
+
+这份文件对 Claude Code 很有用。
+
+---
+
+# 四、给 Claude Code 的第一条提示词
+
+# 五、MVP 的核心模块怎么设计
+
+## `problem-parser.ts`
+
+输入：
+
+```text
+Claude Code 用 OpenCode Go 跑 DeepSeek 报 reasoning_content 错
+```
+
+输出：
+
+```ts
+{
+  rawText: string;
+  software: string[];
+  errorTerms: string[];
+  protocols: string[];
+  problemType: "api_compatibility" | "build_error" | "runtime_error" | "config_error" | "unknown";
+  desiredSolutionTypes: string[];
+}
+```
+
+---
+
+## `query-generator.ts`
+
+输入 problem object，输出：
+
+```ts
+[
+  "\"reasoning_content\" \"Claude Code\"",
+  "\"OpenCode Go\" \"Claude Code\" proxy",
+  "\"DeepSeek\" \"reasoning_content\"",
+  "\"Anthropic\" \"OpenAI\" \"Claude Code\" adapter",
+  "site:github.com \"Claude Code\" \"OpenAI compatible\""
+]
+```
+
+---
+
+## `github-search.ts`
+
+先定义接口，不急着真实实现：
+
+```ts
+export interface SearchProvider {
+  search(query: string): Promise<Candidate[]>;
+}
+```
+
+MVP 先用：
+
+```ts
+MockSearchProvider
+```
+
+---
+
+## `scorer.ts`
+
+输入 candidate：
+
+```ts
+{
+  name: "oc-go-cc",
+  description: "...",
+  readmeText: "...",
+  stars: 12,
+  updatedAt: "...",
+  url: "..."
+}
+```
+
+输出：
+
+```ts
+{
+  candidate,
+  score: 92,
+  reasons: [
+    "Exact match: reasoning_content",
+    "Stack match: Claude Code + OpenCode Go",
+    "README mentions Anthropic to OpenAI conversion"
+  ],
+  risks: [
+    "New project",
+    "Low stars"
+  ]
+}
+```
+
+---
+
+# 六、需要特别注意的细节
+
+## 1. 不要让 LLM 直接决定最终排名
+
+LLM 可以抽取和总结，但排名最好用可解释的规则。
+
+否则结果会变成：
+
+```text
+看起来不错，所以排第一
+```
+
+你要的是：
+
+```text
+命中了 4 个关键栈词 + 1 个精确错误 + README 有安装示例，所以排第一
+```
+
+---
+
+## 2. 必须保留证据
+
+每个推荐都要有 evidence：
+
+```ts
+evidence: [
+  {
+    source: "README",
+    quote: "Supports Claude Code and OpenCode Go",
+    url: "..."
+  }
+]
+```
+
+这样用户才能信。
+
+---
+
+## 3. 明确区分三类结果
+
+建议分成：
+
+```text
+Tool：可以直接使用的项目
+Issue：别人遇到过同样问题
+Workaround：临时解决方法
+```
+
+比如：
+
+```text
+oc-go-cc = Tool
+cc-switch issue = Issue
+disable thinking = Workaround
+```
+
+---
+
+## 4. 新项目不能因为 star 少就被埋掉
+
+你的项目价值之一就是发现新工具。
+
+所以评分不能是：
+
+```text
+stars 越多越靠前
+```
+
+而应该是：
+
+```text
+适配度优先，stars 只是可信度参考
+```
+
+---
+
+## 5. 不要自动执行未知工具
+
+后期即使加“一键安装”，也要非常谨慎。
+
+至少要先显示：
+
+```text
+即将运行：
+npm install -g xxx
+
+来源：
+GitHub repo xxx
+
+风险：
+项目较新，star 较少，未验证安全性
+```
+
+MVP 直接禁止自动执行即可。
+
+---
+
+# 七、我建议的开发里程碑
+
+# 八、给你一个最终建议
+
+你现在最应该先写的不是代码，而是这三个文件：
+
+```text
+PRODUCT_SPEC.md
+SCORING_RULES.md
+CLAUDE_CODE_RULES.md
+```
+
+它们能防止 Claude Code 把项目写偏。
+
+然后让 Claude Code 第一次只做：
+
+```text
+TypeScript CLI + mock provider + parser + scorer + tests
+```
+
+不要一开始就接真实搜索 API。
+
+这样你能在 1～2 个开发回合内得到一个可运行雏形。
