@@ -1,6 +1,6 @@
 # Existing Solution Finder
 
-> **Find existing tools, GitHub projects, issues, and workarounds for your technical problems — instantly, without API keys.**
+> **Find existing tools, GitHub projects, issues, and workarounds for your technical problems — instantly.**
 
 A CLI tool that takes a raw error log or problem description and returns a **ranked, annotated list of existing solutions**: open-source tools, GitHub issues, config workarounds, and npm packages — scored by relevance, recency, and safety.
 
@@ -65,18 +65,21 @@ Each result includes a copy-pasteable next step:
    to `http://localhost:8787`.
 ```
 
-### 🧪 96 Tests, Zero Config
-- Unit tests for parser, query generator, scorer
+### 🧪 123 Tests, Zero Config
+- Unit tests for parser, query generator, scorer, GitHub search utilities
 - **End-to-end pipeline test** that validates the full flow including rank order
 - Deterministic (no `Date.now()` without seeding)
 - 94%+ statement coverage
 
 ```bash
-npm test       # 96 tests, ~0.6s
+npm test       # 123 tests, ~0.7s
 ```
 
 ### 🔌 Mock-First, Real-API-Ready
 Ships with a rich mock provider (9 hand-crafted candidates) that exercises every score tier, trust level, and penalty condition — no API keys required to run or test. Real GitHub/web/npm providers are wired up and ready to activate.
+
+**Mock mode** (default): Uses built-in candidates, no API calls, no keys needed.
+**Real mode** (`--real`): Searches GitHub via Search API, fetches READMEs, extracts metadata. Requires `GITHUB_TOKEN`.
 
 ---
 
@@ -85,7 +88,16 @@ Ships with a rich mock provider (9 hand-crafted candidates) that exercises every
 ```bash
 npm install
 npm run build
-npm start -- "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
+
+# Mock mode (default) — no API keys needed
+npm start -- solve "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
+
+# Real mode — requires GITHUB_TOKEN
+export GITHUB_TOKEN=your_token_here
+npm start -- solve --real "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
+
+# Real mode — GitHub only
+npm start -- solve --real --provider github "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
 ```
 
 **Example output (rank #1):**
@@ -113,7 +125,7 @@ npm start -- "reasoning_content error with Claude Code + DeepSeek + OpenCode Go"
 npm install
 npm run build      # TypeScript compile
 npm run dev        # Watch mode
-npm test           # Run all tests (96)
+npm test           # Run all tests (123)
 npm run typecheck  # Zero-error TypeScript check
 npm run lint       # ESLint
 ```
@@ -131,7 +143,7 @@ src/
 │   └── summarizer.ts     # Pure: RankedCandidate[] → string
 ├── providers/
 │   ├── mock-provider.ts  # Built-in mock (no API keys needed)
-│   ├── github-search.ts  # GitHub Search API (requires GITHUB_TOKEN)
+│   ├── github-search.ts  # GitHub Search API + README fetch + metadata extraction
 │   ├── web-search.ts     # Brave/SerpAPI (optional)
 │   └── package-search.ts # npm registry (no auth)
 ├── types/                # candidate.ts | problem.ts | score.ts
@@ -141,7 +153,8 @@ tests/
 ├── problem-parser.test.ts
 ├── query-generator.test.ts
 ├── scorer.test.ts
-└── pipeline.e2e.test.ts  # Full end-to-end pipeline test
+├── github-search.test.ts  # Query sanitizer, dedup, README metadata extraction
+└── pipeline.e2e.test.ts   # Full end-to-end pipeline test
 ```
 
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
@@ -161,7 +174,7 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the full design.
 |-------|--------|-------------|
 | Phase 1 | ✅ Done | Project scaffold, types, core modules |
 | Phase 2 | ✅ Done | End-to-end mock MVP, 96 tests, full output format |
-| Phase 3 | 🔜 Next | Connect real GitHub + npm APIs |
+| Phase 3 | ✅ Done | Real GitHub Search API + README fetch + metadata extraction |
 | Phase 4 | 🔜 Later | Semantic scoring via embeddings |
 | Phase 5 | 🔜 Later | Web UI |
 

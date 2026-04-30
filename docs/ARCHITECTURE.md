@@ -46,6 +46,10 @@ User Input (CLI)
 - Parse CLI arguments via `commander`
 - Load `.env` via `dotenv`
 - Orchestrate the pipeline (parse → query → search → score → rank → summarize)
+- Supports `--mock` (default) and `--real` modes
+- Supports `--provider github|web|npm` to limit search scope
+- Validates `GITHUB_TOKEN` when `--real` + GitHub provider is needed
+- Uses `searchGitHubMultiQuery` for cross-query deduplication
 - Print results to stdout
 - Exit with code 1 on fatal errors
 
@@ -76,8 +80,13 @@ User Input (CLI)
 - Formats warnings clearly
 
 ### `src/providers/github-search.ts`
-- Calls GitHub Search API (code + repository endpoints)
-- Requires `GITHUB_TOKEN`
+- Calls GitHub Search API (repositories endpoint)
+- Requires `GITHUB_TOKEN` (only in `--real` mode)
+- Sanitizes queries: removes `site:` prefixes, strips long error-log tokens, truncates to 256 chars
+- Fetches README from `raw.githubusercontent.com` for each repo result
+- Extracts metadata from README: install instructions, example config, suspicious install scripts
+- Deduplicates results across multiple queries by `full_name` (case-insensitive)
+- Exports: `searchGitHub`, `searchGitHubMultiQuery`, `sanitizeGitHubQuery`, `deduplicateByFullName`, `extractReadmeMetadata`
 - Returns `RawCandidate[]`
 
 ### `src/providers/web-search.ts`
@@ -102,6 +111,27 @@ string (raw input)
   → RankedCandidate[]   (after ranker)
   → string (output)
 ```
+
+## Provider Pipeline
+
+The search layer operates in two modes:
+
+### Mock Mode (default)
+1. `generateQueries` produces `Query[]` for the problem.
+2. `createMockProvider(getBuiltinMockCandidates())` returns a search function.
+3. Each query runs against the mock provider; results are concatenated.
+4. No network calls. No API keys required.
+
+### Real Mode (`--real`)
+1. `generateQueries` produces `Query[]` for the problem.
+2. CLI filters queries by `--provider` if specified.
+3. GitHub queries are batched to `searchGitHubMultiQuery`:
+   - Queries are sanitized (`sanitizeGitHubQuery`) to remove `site:` prefixes and error logs.
+   - GitHub Search API returns repositories; README is fetched via `raw.githubusercontent.com`.
+   - README metadata is extracted (`extractReadmeMetadata`).
+   - Results are deduplicated by `full_name` (`deduplicateByFullName`).
+4. Web and npm queries run per-query in parallel via `searchWeb` and `searchPackages`.
+5. All candidate arrays are concatenated and passed to the scorer.
 
 ## Design Principles
 

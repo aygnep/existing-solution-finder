@@ -4,7 +4,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 const envSchema = z.object({
-  GITHUB_TOKEN: z.string().min(1, 'GITHUB_TOKEN is required'),
+  GITHUB_TOKEN: z.string().optional(),
   WEB_SEARCH_PROVIDER: z.enum(['brave', 'serpapi']).optional(),
   WEB_SEARCH_API_KEY: z.string().optional(),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
