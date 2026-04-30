@@ -6,6 +6,13 @@
   "bin": {
     "tool-resolver": "dist/cli/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "README.zh-CN.md",
+    "LICENSE",
+    "package.json"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -15,7 +22,8 @@
     "test:coverage": "jest --coverage",
     "lint": "eslint src tests --ext .ts",
     "typecheck": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build && npm test && npm run typecheck"
   },
   "keywords": [
     "cli",

@@ -7,7 +7,9 @@ import { scoreAndAttach } from '../core/scorer.js';
 import { rankCandidates } from '../core/ranker.js';
 import { summarize } from '../core/summarizer.js';
 import { createMockProvider, getBuiltinMockCandidates } from '../providers/mock-provider.js';
+import { parseLanguage, t } from '../i18n/messages.js';
 import type { Provider, RawCandidate } from '../types/candidate.js';
+import type { Language } from '../i18n/types.js';
 
 const VALID_PROVIDERS: readonly Provider[] = ['github', 'web', 'npm'];
 
@@ -19,32 +21,43 @@ program
   .version('0.1.0');
 
 program
-  .command('solve <problem>', { isDefault: true })
+  .command('solve [problem]', { isDefault: true })
   .description('Analyze a problem and find matching tools')
   .option('--stdin', 'Read problem from stdin instead of argument')
   .option('--max-results <n>', 'Maximum results to show', '10')
   .option('--mock', 'Use mock provider (default, no API calls)')
   .option('--real', 'Use real providers (requires API keys)')
   .option('--provider <name>', 'Limit to specific provider: github | web | npm')
+  .option('--lang <lang>', 'Output language: en | zh', 'en')
   .option('--log-level <level>', 'Log level: debug | info | warn | error', 'info')
-  .action(async (problemArg: string, options: {
+  .action(async (problemArg: string | undefined, options: {
     stdin?: boolean;
     maxResults: string;
     mock?: boolean;
     real?: boolean;
     provider?: string;
+    lang?: string;
     logLevel: string;
   }) => {
+    let lang: Language;
+    try {
+      lang = parseLanguage(options.lang);
+    } catch (err) {
+      process.stderr.write(String((err as Error).message) + '\n');
+      process.exit(1);
+    }
+
     logger.setLevel(options.logLevel as 'debug' | 'info' | 'warn' | 'error');
 
     // Collect problem input
-    let problemText = problemArg;
+    let problemText = problemArg ?? '';
     if (options.stdin) {
+      logger.info(t(lang, 'readingFromStdin'));
       problemText = await readStdin();
     }
 
     if (!problemText?.trim()) {
-      process.stderr.write('Error: problem description is empty.\n');
+      process.stderr.write(`${t(lang, 'error')}: ${t(lang, 'inputRequired')}.\n`);
       process.exit(1);
     }
 
@@ -58,7 +71,7 @@ program
       const normalized = options.provider.toLowerCase();
       if (!VALID_PROVIDERS.includes(normalized as Provider)) {
         process.stderr.write(
-          `Error: invalid provider "${options.provider}". Valid options: github, web, npm.\n`,
+          `${t(lang, 'error')}: ${t(lang, 'unsupportedProvider')} "${options.provider}". Valid options: github, web, npm.\n`,
         );
         process.exit(1);
       }
@@ -83,7 +96,7 @@ program
     let allCandidates: RawCandidate[];
 
     if (useMock) {
-      logger.info('Using mock provider (no real API calls)');
+      logger.info(t(lang, 'mockMode') + ' (no real API calls)');
       const mockSearch = createMockProvider(getBuiltinMockCandidates());
       const results = await Promise.all(queries.map((q) => mockSearch(q)));
       allCandidates = results.flat();
@@ -104,7 +117,7 @@ program
         !selectedProvider || selectedProvider === 'github';
       if (needsGitHub && !env.GITHUB_TOKEN) {
         process.stderr.write(
-          'Error: --real requires GITHUB_TOKEN to be set.\n' +
+          `${t(lang, 'error')}: ${t(lang, 'missingGithubToken')}.\n` +
             'Create a token at https://github.com/settings/tokens (scope: public_repo)\n' +
             'Then run: GITHUB_TOKEN=your_token npm start -- solve --real "your problem"\n',
         );
@@ -166,7 +179,7 @@ program
     });
 
     // 6. Output
-    const output = summarize(ranked, problem);
+    const output = summarize(ranked, problem, { lang });
     process.stdout.write(output);
   });
 

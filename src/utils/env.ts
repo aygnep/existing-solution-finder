@@ -3,10 +3,16 @@ import * as dotenv from 'dotenv';
 
 dotenv.config();
 
+const emptyToUndefined = (value: unknown): unknown =>
+  value === '' ? undefined : value;
+
 const envSchema = z.object({
-  GITHUB_TOKEN: z.string().optional(),
-  WEB_SEARCH_PROVIDER: z.enum(['brave', 'serpapi']).optional(),
-  WEB_SEARCH_API_KEY: z.string().optional(),
+  GITHUB_TOKEN: z.preprocess(emptyToUndefined, z.string().optional()),
+  WEB_SEARCH_PROVIDER: z.preprocess(
+    emptyToUndefined,
+    z.enum(['brave', 'serpapi']).optional(),
+  ),
+  WEB_SEARCH_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   MAX_RESULTS_PER_PROVIDER: z.coerce.number().int().positive().default(10),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),

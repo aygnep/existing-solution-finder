@@ -199,8 +199,8 @@ describe('E2E core pipeline', () => {
       expect(result.output).toMatch(/Type:/);
     });
 
-    it('output contains Next step for each candidate', () => {
-      expect(result.output).toContain('▶  Next step:');
+    it('output contains Next steps for each candidate', () => {
+      expect(result.output).toContain('▶  Next steps:');
     });
 
     it('output contains Score breakdown', () => {
@@ -217,8 +217,8 @@ describe('E2E core pipeline', () => {
     });
 
     it('output contains warnings for risky candidates', () => {
-      // The archived/suspicious candidate should have WARNING in output
-      expect(result.output).toMatch(/WARNING/);
+      // The archived/suspicious candidate should have Warning in output
+      expect(result.output).toMatch(/Warning/);
     });
 
     it('output does not contain any API key patterns', () => {
@@ -231,7 +231,7 @@ describe('E2E core pipeline', () => {
   describe('empty input edge case', () => {
     it('pipeline handles empty input gracefully', async () => {
       const { output } = await runPipeline('');
-      expect(output).toContain('No candidates found');
+      expect(output).toContain('No results found');
     });
   });
 
