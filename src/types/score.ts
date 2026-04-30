@@ -45,9 +45,16 @@ export interface ScoredCandidate extends RawCandidate {
   readonly score: Score;
 }
 
+/** Categorizes the type of result */
+export type CandidateType = 'tool' | 'issue' | 'workaround';
+
 /** A candidate that has been scored and ranked */
 export interface RankedCandidate extends ScoredCandidate {
   readonly rank: number;
   /** One-sentence explanation of why this candidate matches */
   readonly matchReason: string;
+  /** Whether this is a tool, a GitHub issue, or a workaround/config tip */
+  readonly candidateType: CandidateType;
+  /** Suggested next step for the user */
+  readonly nextStep: string;
 }

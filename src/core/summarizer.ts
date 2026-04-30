@@ -15,6 +15,12 @@ const TRUST_ICONS: Record<string, string> = {
   BLOCKED: '🚫 Risky',
 };
 
+const TYPE_LABELS: Record<string, string> = {
+  tool: '🔧 Tool',
+  issue: '🐛 Issue',
+  workaround: '💡 Workaround',
+};
+
 /**
  * Formats the ranked results into a human-readable CLI string.
  *
@@ -70,12 +76,13 @@ function formatCandidate(candidate: RankedCandidate): string[] {
   const lines: string[] = [];
   const scoreLabel = getScoreLabel(candidate.score.displayTotal);
   const trustLabel = TRUST_ICONS[candidate.score.trustLevel] ?? '';
+  const typeLabel = TYPE_LABELS[candidate.candidateType] ?? candidate.candidateType;
 
   // Header
   lines.push(
     `  [${candidate.rank}] ${candidate.name}`,
     `      ${candidate.url}`,
-    `      Score: ${candidate.score.displayTotal}/100  ${scoreLabel}  |  ${trustLabel}`,
+    `      Type: ${typeLabel}  |  Score: ${candidate.score.displayTotal}/100  ${scoreLabel}  |  ${trustLabel}`,
     '',
     `      Why: ${candidate.matchReason}`,
   );
@@ -114,6 +121,10 @@ function formatCandidate(candidate: RankedCandidate): string[] {
       .join(', ');
     lines.push(`        Penalties: ${penaltyStr}`);
   }
+
+  // Next step — always shown
+  lines.push('');
+  lines.push(`      ▶  Next step: ${candidate.nextStep}`);
 
   lines.push('      ' + '─'.repeat(54));
 

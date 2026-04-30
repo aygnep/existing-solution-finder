@@ -1,4 +1,4 @@
-import type { RankedCandidate, ScoredCandidate } from '../types/score.js';
+import type { RankedCandidate, ScoredCandidate, CandidateType } from '../types/score.js';
 
 export interface RankerOptions {
   /** Maximum number of results to return (default: 10) */
@@ -30,6 +30,8 @@ export function rankCandidates(
     ...candidate,
     rank: index + 1,
     matchReason: buildMatchReason(candidate),
+    candidateType: resolveCandidateType(candidate),
+    nextStep: buildNextStep(candidate),
   }));
 }
 
@@ -81,6 +83,29 @@ function compareCandidates(a: ScoredCandidate, b: ScoredCandidate): number {
   return a.name.localeCompare(b.name);
 }
 
+// ─── Candidate type resolution ────────────────────────────────────────────────
+
+function resolveCandidateType(candidate: ScoredCandidate): CandidateType {
+  // Use explicit hint from provider if available
+  if (candidate.candidateTypeHint) return candidate.candidateTypeHint;
+
+  // Heuristic: URL contains /issues/ → issue
+  if (candidate.url.includes('/issues/')) return 'issue';
+
+  // Heuristic: description or readme mentions workaround/env var/disable
+  const text = `${candidate.description} ${candidate.readmeSnippet ?? ''}`.toLowerCase();
+  if (
+    text.includes('workaround') ||
+    text.includes('environment variable') ||
+    text.includes('disable thinking') ||
+    text.includes('env var')
+  ) {
+    return 'workaround';
+  }
+
+  return 'tool';
+}
+
 // ─── Match reason ─────────────────────────────────────────────────────────────
 
 function buildMatchReason(candidate: ScoredCandidate): string {
@@ -111,6 +136,44 @@ function buildMatchReason(candidate: ScoredCandidate): string {
     return `Matches by general relevance (score: ${candidate.score.displayTotal})`;
   }
 
-  return parts[0].charAt(0).toUpperCase() + parts[0].slice(1) +
-    (parts.length > 1 ? '; ' + parts.slice(1).join('; ') : '') + '.';
+  return (
+    parts[0].charAt(0).toUpperCase() +
+    parts[0].slice(1) +
+    (parts.length > 1 ? '; ' + parts.slice(1).join('; ') : '') +
+    '.'
+  );
+}
+
+// ─── Next step ────────────────────────────────────────────────────────────────
+
+function buildNextStep(candidate: ScoredCandidate): string {
+  // Use explicit hint from provider if available
+  if (candidate.nextStepHint) return candidate.nextStepHint;
+
+  const type = resolveCandidateType(candidate);
+  const readme = (candidate.readmeSnippet ?? '').toLowerCase();
+
+  if (type === 'issue') {
+    return 'Read the issue thread for workarounds or subscribe for updates.';
+  }
+
+  if (type === 'workaround') {
+    return 'Follow the workaround steps in the description, then verify with your stack.';
+  }
+
+  // tool
+  if (readme.includes('npm install')) {
+    return `Run \`npm install ${candidate.name}\` and follow the README quickstart.`;
+  }
+  if (readme.includes('go install')) {
+    return `Run \`go install\` per the README and configure per the example.`;
+  }
+  if (readme.includes('pip install')) {
+    return `Run \`pip install ${candidate.name}\` and configure per the README.`;
+  }
+  if (readme.includes('brew install')) {
+    return `Run \`brew install ${candidate.name}\` and configure per the README.`;
+  }
+
+  return `Review the README at ${candidate.url} and try the installation steps.`;
 }
