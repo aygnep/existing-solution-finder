@@ -173,6 +173,9 @@ export function sanitizeGitHubQuery(queryText: string): string {
 /**
  * Deduplicates candidates by full_name (case-insensitive).
  * When duplicates are found, keeps the first occurrence.
+ *
+ * Note: kept as exported public API for backward compatibility.
+ * Internally, searchGitHubMultiQuery now uses deduplicateById instead.
  */
 export function deduplicateByFullName(
   candidates: readonly RawCandidate[],

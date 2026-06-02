@@ -375,6 +375,36 @@ describe('searchGitHubIssues', () => {
 
     expect(results).toEqual([]);
   });
+
+  it('handles null issue body gracefully', async () => {
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({
+        total_count: 1,
+        items: [{
+          html_url: 'https://github.com/owner/repo/issues/1',
+          title: 'Test issue',
+          body: null,
+          number: 1,
+          state: 'open',
+          repository_url: 'https://api.github.com/repos/owner/repo',
+          created_at: '2026-01-01T00:00:00Z',
+          updated_at: '2026-01-02T00:00:00Z',
+          user: { type: 'User' },
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch;
+
+    const results = await searchGitHubIssues(
+      makeQuery('test', 'github-issues'),
+      makeEnv(),
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0].readmeSnippet).toBeUndefined();
+  });
 });
 
 // ─── searchGitHubMultiQuery mixed routing ────────────────────────────────────
