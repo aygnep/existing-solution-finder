@@ -27,6 +27,16 @@ function makeIo(stdinText = ''): { io: CliIo; stdout: CaptureStream; stderr: Cap
   return { io: { stdin, stdout, stderr }, stdout, stderr };
 }
 
+const originalFetch = global.fetch;
+const originalEnv = { ...process.env };
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  process.env = { ...originalEnv };
+  jest.restoreAllMocks();
+  process.exitCode = undefined;
+});
+
 describe('Fixseek CLI UX', () => {
   it('supports default query usage without solve', async () => {
     const { io, stdout, stderr } = makeIo();
@@ -100,5 +110,61 @@ describe('Fixseek CLI UX', () => {
   it('package bin points to fixseek', () => {
     expect(packageJson.name).toBe('fixseek');
     expect(packageJson.bin).toEqual({ fixseek: 'dist/cli/index.js' });
+  });
+
+  it('includes GitHub issue candidates in real GitHub mode', async () => {
+    process.env.GITHUB_TOKEN = 'ghp_test_token';
+    process.env.MAX_RESULTS_PER_PROVIDER = '10';
+    process.env.REQUEST_TIMEOUT_MS = '1000';
+
+    global.fetch = jest.fn(async (url: string) => {
+      if (url.includes('/search/repositories')) {
+        return new Response(JSON.stringify({ total_count: 0, items: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      if (url.includes('/search/issues')) {
+        return new Response(JSON.stringify({
+          total_count: 1,
+          items: [{
+            html_url: 'https://github.com/owner/repo/issues/2365',
+            title: 'DeepSeek reasoning_content error',
+            body: 'Claude Code users report reasoning_content failures.',
+            number: 2365,
+            state: 'open',
+            repository_url: 'https://api.github.com/repos/owner/repo',
+            created_at: '2026-04-01T00:00:00Z',
+            updated_at: '2026-05-01T00:00:00Z',
+            user: { type: 'User' },
+          }],
+        }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      return new Response('not found', { status: 404 });
+    }) as unknown as typeof fetch;
+
+    const { io, stdout, stderr } = makeIo();
+    const code = await runSolve(
+      ['reasoning_content error with Claude Code'],
+      {
+        real: true,
+        provider: 'github',
+        maxResults: '3',
+        logLevel: 'warn',
+        lang: 'en',
+      },
+      io,
+    );
+
+    expect(code).toBe(0);
+    expect(stdout.text()).toContain('owner/repo#2365');
+    expect(stdout.text()).toContain('Type: 🐛 Issue');
+    expect(stdout.text()).toContain('Read the issue thread');
+    expect(stderr.text()).toBe('');
   });
 });
