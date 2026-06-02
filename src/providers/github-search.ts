@@ -28,6 +28,23 @@ interface GitHubSearchResponse {
   items: GitHubRepo[];
 }
 
+interface GitHubIssue {
+  html_url: string;
+  title: string;
+  body: string | null;
+  number: number;
+  state: 'open' | 'closed';
+  repository_url: string;
+  created_at: string;
+  updated_at: string;
+  user: { type: 'User' | 'Organization' };
+}
+
+interface GitHubIssueSearchResponse {
+  total_count: number;
+  items: GitHubIssue[];
+}
+
 /**
  * Searches GitHub repositories for candidates matching the query.
  *
@@ -71,16 +88,50 @@ export async function searchGitHub(
   return candidates;
 }
 
+export async function searchGitHubIssues(
+  query: Query,
+  env: Env,
+): Promise<readonly RawCandidate[]> {
+  if (!env.GITHUB_TOKEN) {
+    logger.warn('GitHub issue search skipped: GITHUB_TOKEN not configured');
+    return [];
+  }
+
+  const sanitizedQuery = sanitizeGitHubQuery(query.text);
+  if (!sanitizedQuery) {
+    logger.debug('GitHub issue search skipped: empty query after sanitization');
+    return [];
+  }
+
+  const url = buildIssueSearchUrl(sanitizedQuery, env.MAX_RESULTS_PER_PROVIDER);
+  const result = await fetchGitHubJson<GitHubIssueSearchResponse>(
+    url,
+    env,
+    { requestName: 'GitHub issue search', query: sanitizedQuery },
+  );
+
+  if (!result.ok) return [];
+
+  return result.data.items.map(mapIssue);
+}
+
 /**
- * Searches GitHub across multiple queries and deduplicates results by full_name.
- * When a repo appears in multiple query results, the first occurrence is kept.
+ * Searches GitHub across multiple queries and deduplicates results by ID.
+ * Routes repo queries to repositories and issue queries to issues.
  */
 export async function searchGitHubMultiQuery(
   queries: readonly Query[],
   env: Env,
 ): Promise<readonly RawCandidate[]> {
-  const allResults = await Promise.all(queries.map((q) => searchGitHub(q, env)));
-  return deduplicateByFullName(allResults.flat());
+  const repoQueries = queries.filter((q) => q.category !== 'github-issues');
+  const issueQueries = queries.filter((q) => q.category === 'github-issues');
+
+  const [repoResults, issueResults] = await Promise.all([
+    Promise.all(repoQueries.map((q) => searchGitHub(q, env))),
+    Promise.all(issueQueries.map((q) => searchGitHubIssues(q, env))),
+  ]);
+
+  return deduplicateById([...repoResults.flat(), ...issueResults.flat()]);
 }
 
 // ─── Query sanitization ───────────────────────────────────────────────────────
@@ -172,6 +223,56 @@ function buildUrl(queryText: string, perPage: number): URL {
   url.searchParams.set('order', 'desc');
   url.searchParams.set('per_page', String(Math.min(perPage, 30)));
   return url;
+}
+
+function buildIssueSearchUrl(queryText: string, perPage: number): URL {
+  const url = new URL('https://api.github.com/search/issues');
+  const issueQuery = queryText.includes('is:issue')
+    ? queryText
+    : `${queryText} is:issue`;
+  url.searchParams.set('q', issueQuery);
+  url.searchParams.set('sort', 'updated');
+  url.searchParams.set('order', 'desc');
+  url.searchParams.set('per_page', String(Math.min(perPage, 30)));
+  return url;
+}
+
+function mapIssue(issue: GitHubIssue): RawCandidate {
+  const repoName = repoNameFromApiUrl(issue.repository_url);
+  const body = issue.body ?? '';
+
+  return {
+    id: issue.html_url,
+    name: `${repoName}#${issue.number}`,
+    url: issue.html_url,
+    description: issue.title,
+    readmeSnippet: body ? body.slice(0, MAX_README_BYTES) : undefined,
+    provider: 'github',
+    candidateTypeHint: 'issue',
+    nextStepHint: 'Read the issue thread for confirmed workarounds, maintainer responses, and affected versions.',
+    metadata: {
+      createdDate: issue.created_at ? new Date(issue.created_at) : undefined,
+      lastCommitDate: issue.updated_at ? new Date(issue.updated_at) : undefined,
+      ownerType: issue.user.type === 'Organization' ? 'organization' : 'user',
+    },
+  };
+}
+
+function repoNameFromApiUrl(repositoryUrl: string): string {
+  const marker = '/repos/';
+  const markerIndex = repositoryUrl.indexOf(marker);
+  if (markerIndex === -1) return repositoryUrl;
+  return repositoryUrl.slice(markerIndex + marker.length);
+}
+
+function deduplicateById(candidates: readonly RawCandidate[]): readonly RawCandidate[] {
+  const seen = new Set<string>();
+  return candidates.filter((candidate) => {
+    const key = candidate.id.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 async function mapRepoWithReadme(

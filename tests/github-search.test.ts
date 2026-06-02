@@ -3,9 +3,11 @@ import {
   deduplicateByFullName,
   extractReadmeMetadata,
   searchGitHub,
+  searchGitHubIssues,
+  searchGitHubMultiQuery,
 } from '../src/providers/github-search';
 
-import type { RawCandidate } from '../src/types/candidate';
+import type { RawCandidate, QueryCategory } from '../src/types/candidate';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,7 +34,7 @@ function makeEnv() {
   };
 }
 
-function makeQuery(text: string, category = 'github-repos' as const) {
+function makeQuery(text: string, category: QueryCategory = 'github-repos') {
   return { text, category, providers: ['github'] as const };
 }
 
@@ -308,5 +310,120 @@ describe('searchGitHub repository search hardening', () => {
         hasInstallInstructions: true,
       },
     });
+  });
+});
+
+// ─── searchGitHubIssues ──────────────────────────────────────────────────────
+
+describe('searchGitHubIssues', () => {
+  it('maps GitHub issue search results into issue candidates', async () => {
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({
+        total_count: 1,
+        items: [{
+          html_url: 'https://github.com/owner/repo/issues/2365',
+          title: 'DeepSeek reasoning_content error',
+          body: 'Claude Code fails when DeepSeek returns reasoning_content.',
+          number: 2365,
+          state: 'open',
+          repository_url: 'https://api.github.com/repos/owner/repo',
+          created_at: '2026-04-01T00:00:00Z',
+          updated_at: '2026-05-01T00:00:00Z',
+          user: { type: 'User' },
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch;
+
+    const results = await searchGitHubIssues(
+      makeQuery('"reasoning_content" "Claude Code"', 'github-issues'),
+      makeEnv(),
+    );
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      id: 'https://github.com/owner/repo/issues/2365',
+      name: 'owner/repo#2365',
+      url: 'https://github.com/owner/repo/issues/2365',
+      description: 'DeepSeek reasoning_content error',
+      readmeSnippet: 'Claude Code fails when DeepSeek returns reasoning_content.',
+      provider: 'github',
+      candidateTypeHint: 'issue',
+      nextStepHint: 'Read the issue thread for confirmed workarounds, maintainer responses, and affected versions.',
+      metadata: {
+        ownerType: 'user',
+      },
+    });
+    expect(results[0].metadata.createdDate).toEqual(new Date('2026-04-01T00:00:00Z'));
+    expect(results[0].metadata.lastCommitDate).toEqual(new Date('2026-05-01T00:00:00Z'));
+  });
+
+  it('returns an empty array for issue search rate limits', async () => {
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch;
+
+    const results = await searchGitHubIssues(
+      makeQuery('"reasoning_content"', 'github-issues'),
+      makeEnv(),
+    );
+
+    expect(results).toEqual([]);
+  });
+});
+
+// ─── searchGitHubMultiQuery mixed routing ────────────────────────────────────
+
+describe('searchGitHubMultiQuery mixed routing', () => {
+  it('routes repo queries to repositories and issue queries to issues', async () => {
+    const fetchMock = jest
+      .fn()
+      .mockImplementation(async (url: string) => {
+        if (url.includes('/search/repositories')) {
+          return new Response(JSON.stringify({ total_count: 0, items: [] }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        if (url.includes('/search/issues')) {
+          return new Response(JSON.stringify({
+            total_count: 1,
+            items: [{
+              html_url: 'https://github.com/owner/repo/issues/10',
+              title: 'reasoning_content workaround',
+              body: 'Use a response transformer.',
+              number: 10,
+              state: 'closed',
+              repository_url: 'https://api.github.com/repos/owner/repo',
+              created_at: '2026-02-01T00:00:00Z',
+              updated_at: '2026-03-01T00:00:00Z',
+              user: { type: 'Organization' },
+            }],
+          }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
+
+        return new Response('not found', { status: 404 });
+      });
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    const results = await searchGitHubMultiQuery([
+      makeQuery('"Claude Code"', 'github-repos'),
+      makeQuery('"reasoning_content" issue', 'github-issues'),
+    ], makeEnv());
+
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/search/repositories'))).toBe(true);
+    expect(fetchMock.mock.calls.some((call) => String(call[0]).includes('/search/issues'))).toBe(true);
+    expect(results).toHaveLength(1);
+    expect(results[0].candidateTypeHint).toBe('issue');
+    expect(results[0].name).toBe('owner/repo#10');
   });
 });
