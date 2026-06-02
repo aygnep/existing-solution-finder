@@ -33,7 +33,7 @@ export interface GitHubRequestContext {
 }
 
 export function classifyGitHubStatus(status: number): GitHubApiFailureKind {
-  if (status === 401 || status === 422) return 'auth';
+  if (status === 401) return 'auth';
   if (status === 403 || status === 429) return 'rate-limit';
   if (status === 404) return 'not-found';
   return 'other';

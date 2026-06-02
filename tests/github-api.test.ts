@@ -35,6 +35,8 @@ describe('classifyGitHubStatus', () => {
     [401, 'auth'],
     [403, 'rate-limit'],
     [404, 'not-found'],
+    [422, 'other'],
+    [429, 'rate-limit'],
     [500, 'other'],
   ])('classifies %i as %s', (status, expected) => {
     expect(classifyGitHubStatus(status)).toBe(expected);
@@ -101,6 +103,27 @@ describe('fetchGitHubJson', () => {
       expect(result.failure.kind).toBe('rate-limit');
       expect(result.failure.status).toBe(403);
     }
+  });
+
+  it('returns a not-found failure for 404 responses', async () => {
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ message: 'Not Found' }, { status: 404 }),
+    ) as unknown as typeof fetch;
+
+    const result = await fetchGitHubJson<{ ok: boolean }>(
+      new URL('https://api.github.com/repos/owner/repo'),
+      makeEnv(),
+      { requestName: 'repo fetch', query: 'owner/repo' },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      failure: {
+        kind: 'not-found',
+        status: 404,
+        message: 'repo fetch returned HTTP 404 for query "owner/repo"',
+      },
+    });
   });
 
   it('returns an invalid-json failure when response JSON cannot be parsed', async () => {
