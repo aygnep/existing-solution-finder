@@ -40,32 +40,37 @@ fixseek --stack "Node.js,Docker" "container networking issue"
 ## 常用命令
 
 ```bash
-# 推荐用法：直接查询
+# 直接查询
 fixseek "问题描述"
-
-# 兼容旧式子命令
-fixseek solve "问题描述"
 
 # 从 stdin 读取错误日志
 cat error.log | fixseek --stdin
 
-# 使用真实 provider
-fixseek --real --provider github "vite module not found"
+# 使用真实搜索（需要 GITHUB_TOKEN）
+fixseek --real "vite module not found"
 
-# 使用 mock provider
-fixseek --mock "Claude Code DeepSeek reasoning_content error"
+# 中文输出
+fixseek --lang zh "reasoning_content 报错"
 
 # 限制结果数量
 fixseek --max-results 5 "npm package ESM CommonJS error"
+```
+
+### 高级选项
+
+```bash
+# 兼容旧式子命令
+fixseek solve "问题描述"
 
 # 补充技术栈上下文
 fixseek --stack "Node.js,Docker" "container networking issue"
 
-# 调整日志级别
-fixseek --log-level warn "dependency resolution error"
+# 限定搜索 provider
+fixseek --real --provider github "vite module not found"
 
-# 中文输出标签
-fixseek --lang zh "Claude Code + DeepSeek reasoning_content 报错"
+# 强制 mock 模式或调整日志级别
+fixseek --mock "dependency resolution error"
+fixseek --log-level debug "dependency resolution error"
 ```
 
 ## 配置

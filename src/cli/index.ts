@@ -252,11 +252,16 @@ function helpExamples(): string {
 Examples:
   fixseek "reasoning_content error with Claude Code + DeepSeek"
   cat error.log | fixseek --stdin
-  fixseek --real --provider github "vite module not found"
-  fixseek --stack "Node.js,Docker" "container networking issue"
-  fixseek solve "npm package ESM CommonJS error"
+  fixseek --real "vite module not found"
+  fixseek --lang zh "reasoning_content 报错"
+  fixseek --max-results 5 "npm package ESM CommonJS error"
 
-Default usage does not require the solve command; solve is kept for compatibility.
+Advanced (still supported):
+  fixseek solve "problem"        # compatibility subcommand
+  fixseek --provider github ...  # limit to one provider
+  fixseek --stack "Node.js,Docker" ...
+  fixseek --mock ...             # force mock mode
+  fixseek --log-level debug ...
 `;
 }
 

@@ -103,7 +103,11 @@ describe('Fixseek CLI UX', () => {
     expect(help).toContain('find existing fixes');
     expect(help).toContain('fixseek "reasoning_content error with Claude Code + DeepSeek"');
     expect(help).toContain('cat error.log | fixseek --stdin');
-    expect(help).toContain('fixseek solve "npm package ESM CommonJS error"');
+    expect(help).toContain('fixseek --real');
+    expect(help).toContain('fixseek --lang zh');
+    expect(help).toContain('fixseek --max-results 5');
+    expect(help).toContain('solve "problem"');
+    expect(help).toContain('compatibility subcommand');
     expect(help).not.toContain('tool-resolver');
   });
 

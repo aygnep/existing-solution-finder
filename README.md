@@ -37,35 +37,41 @@ Mock mode is the default and does not require an API key.
 ## Usage
 
 ```bash
-# Direct query, recommended
+# Direct query
 fixseek "reasoning_content error with Claude Code + DeepSeek"
 
 # Read a log from stdin
 cat error.log | fixseek --stdin
 
-# Compatibility subcommand
-fixseek solve "npm package ESM CommonJS error"
+# Real search (requires GITHUB_TOKEN)
+fixseek --real "vite module not found"
+
+# Chinese output
+fixseek --lang zh "reasoning_content 报错"
 
 # Limit results
-fixseek --max-results 5 "vite module not found"
-
-# Add stack context
-fixseek --stack "Node.js,Docker" "container networking issue"
-
-# Chinese or English output labels
-fixseek --lang zh "Claude Code + DeepSeek reasoning_content 报错"
-fixseek --lang en "reasoning_content error with Claude Code"
-
-# Quiet or verbose logs
-fixseek --log-level warn "dependency resolution error"
-fixseek --log-level debug "dependency resolution error"
-
-# Real GitHub search
-fixseek --real --provider github "vite module not found"
+fixseek --max-results 5 "npm package ESM CommonJS error"
 ```
 
 Supported providers are `github`, `web`, and `npm`. Real GitHub mode requires
 `GITHUB_TOKEN`; mock mode does not.
+
+### Advanced Options
+
+```bash
+# Compatibility subcommand
+fixseek solve "npm package ESM CommonJS error"
+
+# Add stack context
+fixseek --stack "Node.js,Docker" "container networking issue"
+
+# Limit to a specific provider
+fixseek --real --provider github "vite module not found"
+
+# Force mock mode or adjust log level
+fixseek --mock "dependency resolution error"
+fixseek --log-level debug "dependency resolution error"
+```
 
 ## Examples
 
@@ -74,13 +80,11 @@ fixseek "TypeError fetch failed Node.js proxy"
 
 fixseek "vite module not found after pnpm install"
 
-fixseek --stack "React,Vite,TypeScript" "Cannot find module vite/client"
-
-fixseek --provider npm "ESM CommonJS interop package error"
-
-fixseek --real --provider github "Docker host.docker.internal connection refused"
-
 cat ./error.log | fixseek --stdin --max-results 5
+
+fixseek --real "Docker host.docker.internal connection refused"
+
+fixseek --lang zh "ESM CommonJS interop 包报错"
 ```
 
 ## Configuration

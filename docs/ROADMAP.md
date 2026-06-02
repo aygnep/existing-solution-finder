@@ -41,9 +41,9 @@ platform features.
 
 ## Short-Term Goals
 
-The active implementation slice is M2.5 plus M3: harden real provider behavior,
-then add GitHub Issues Search as first-class candidates in the same provider
-pipeline.
+The active implementation slice is agent-first global skill packaging: create a
+`fixseek` global skill for coding agents, simplify CLI help for common usage,
+and update docs for agent handoff. This runs alongside M2.5/M3 provider work.
 
 ### 1. Stabilize Real Provider Behavior
 
