@@ -80,13 +80,14 @@ User Input (CLI)
 - Formats warnings clearly
 
 ### `src/providers/github-search.ts`
-- Calls GitHub Search API (repositories endpoint)
+- Calls GitHub Search API for repositories and issues
 - Requires `GITHUB_TOKEN` (only in `--real` mode)
 - Sanitizes queries: removes `site:` prefixes, strips long error-log tokens, truncates to 256 chars
-- Fetches README from `raw.githubusercontent.com` for each repo result
-- Extracts metadata from README: install instructions, example config, suspicious install scripts
-- Deduplicates results across multiple queries by `full_name` (case-insensitive)
-- Exports: `searchGitHub`, `searchGitHubMultiQuery`, `sanitizeGitHubQuery`, `deduplicateByFullName`, `extractReadmeMetadata`
+- Repository search fetches README from `raw.githubusercontent.com` for each repo result
+- Repository search extracts metadata from README: install instructions, example config, suspicious install scripts
+- Issue search maps GitHub issues into `RawCandidate` objects with `candidateTypeHint: 'issue'`
+- Deduplicates mixed GitHub results by stable candidate ID
+- Exports: `searchGitHub`, `searchGitHubIssues`, `searchGitHubMultiQuery`, `sanitizeGitHubQuery`, `deduplicateByFullName`, `extractReadmeMetadata`
 - Returns `RawCandidate[]`
 
 ### `src/providers/web-search.ts`
@@ -127,9 +128,11 @@ The search layer operates in two modes:
 2. CLI filters queries by `--provider` if specified.
 3. GitHub queries are batched to `searchGitHubMultiQuery`:
    - Queries are sanitized (`sanitizeGitHubQuery`) to remove `site:` prefixes and error logs.
-   - GitHub Search API returns repositories; README is fetched via `raw.githubusercontent.com`.
-   - README metadata is extracted (`extractReadmeMetadata`).
-   - Results are deduplicated by `full_name` (`deduplicateByFullName`).
+   - `github-issues` category queries call the GitHub Issues Search API.
+   - Other GitHub queries call the GitHub Repository Search API.
+   - Repository candidates include README metadata when README fetch succeeds.
+   - Issue candidates include `candidateTypeHint: 'issue'` and issue body snippets when available.
+   - Mixed GitHub results are deduplicated by stable candidate ID.
 4. Web and npm queries run per-query in parallel via `searchWeb` and `searchPackages`.
 5. All candidate arrays are concatenated and passed to the scorer.
 

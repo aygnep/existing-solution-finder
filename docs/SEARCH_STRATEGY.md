@@ -51,6 +51,11 @@ site:github.com "reasoning_content" issue
 "Claude Code" "DeepSeek" issue workaround
 ```
 
+In real GitHub mode, this category is routed to the GitHub Issues Search API.
+Issue results are returned as normal candidates with `candidateTypeHint: 'issue'`
+so the existing scorer, ranker, and summarizer can compare them with repository,
+package, documentation, and workaround candidates.
+
 ### 5. Alternative Solution Queries
 Broaden the search to find tools that solve the same underlying need differently.
 
