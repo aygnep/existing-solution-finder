@@ -2,6 +2,7 @@ import {
   sanitizeGitHubQuery,
   deduplicateByFullName,
   extractReadmeMetadata,
+  searchGitHub,
 } from '../src/providers/github-search';
 
 import type { RawCandidate } from '../src/types/candidate';
@@ -19,6 +20,26 @@ function makeCandidate(overrides: Partial<RawCandidate> = {}): RawCandidate {
     ...overrides,
   };
 }
+
+const originalFetch = global.fetch;
+
+function makeEnv() {
+  return {
+    GITHUB_TOKEN: 'ghp_test_token',
+    LOG_LEVEL: 'warn' as const,
+    MAX_RESULTS_PER_PROVIDER: 10,
+    REQUEST_TIMEOUT_MS: 1000,
+  };
+}
+
+function makeQuery(text: string, category = 'github-repos' as const) {
+  return { text, category, providers: ['github'] as const };
+}
+
+afterEach(() => {
+  global.fetch = originalFetch;
+  jest.restoreAllMocks();
+});
 
 // ─── sanitizeGitHubQuery ──────────────────────────────────────────────────────
 
@@ -210,6 +231,82 @@ describe('extractReadmeMetadata', () => {
       hasInstallInstructions: false,
       hasExampleConfig: false,
       hasSuspiciousInstallScript: false,
+    });
+  });
+});
+
+// ─── searchGitHub repository search hardening ─────────────────────────────────
+
+describe('searchGitHub repository search hardening', () => {
+  it('returns an empty array for rate-limit-like responses', async () => {
+    global.fetch = jest.fn(async () =>
+      new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch;
+
+    const results = await searchGitHub(makeQuery('Claude Code'), makeEnv());
+
+    expect(results).toEqual([]);
+  });
+
+  it('returns an empty array for malformed JSON responses', async () => {
+    global.fetch = jest.fn(async () =>
+      new Response('{bad-json', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }),
+    ) as unknown as typeof fetch;
+
+    const results = await searchGitHub(makeQuery('Claude Code'), makeEnv());
+
+    expect(results).toEqual([]);
+  });
+
+  it('maps repository results and fetches README text', async () => {
+    global.fetch = jest
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        total_count: 1,
+        items: [{
+          full_name: 'owner/fix-tool',
+          html_url: 'https://github.com/owner/fix-tool',
+          description: 'Fixes reasoning_content errors',
+          stargazers_count: 42,
+          license: { spdx_id: 'MIT' },
+          pushed_at: '2026-05-01T00:00:00Z',
+          created_at: '2026-01-01T00:00:00Z',
+          archived: false,
+          open_issues_count: 3,
+          owner: { type: 'Organization' },
+          default_branch: 'main',
+        }],
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }))
+      .mockResolvedValueOnce(new Response('## Install\n\nnpm install fix-tool', {
+        status: 200,
+      })) as unknown as typeof fetch;
+
+    const results = await searchGitHub(makeQuery('"reasoning_content"'), makeEnv());
+
+    expect(results).toHaveLength(1);
+    expect(results[0]).toMatchObject({
+      id: 'https://github.com/owner/fix-tool',
+      name: 'owner/fix-tool',
+      url: 'https://github.com/owner/fix-tool',
+      description: 'Fixes reasoning_content errors',
+      provider: 'github',
+      metadata: {
+        stars: 42,
+        license: 'MIT',
+        isArchived: false,
+        openIssueCount: 3,
+        ownerType: 'organization',
+        hasInstallInstructions: true,
+      },
     });
   });
 });

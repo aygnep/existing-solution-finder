@@ -1,6 +1,7 @@
 import type { Env } from '../utils/env.js';
 import type { Query, RawCandidate } from '../types/candidate.js';
 import { logger } from '../utils/logger.js';
+import { fetchGitHubJson } from './github-api.js';
 
 /** Maximum length for a GitHub search query to avoid API errors */
 const MAX_QUERY_LENGTH = 256;
@@ -53,38 +54,16 @@ export async function searchGitHub(
 
   logger.debug('GitHub search', { url: url.toString().replace(env.GITHUB_TOKEN, '[REDACTED]') });
 
-  let response: Response;
-  try {
-    response = await fetch(url.toString(), {
-      headers: {
-        Authorization: `Bearer ${env.GITHUB_TOKEN}`,
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      },
-      signal: AbortSignal.timeout(env.REQUEST_TIMEOUT_MS),
-    });
-  } catch (err) {
-    logger.warn('GitHub search request failed', { error: String(err) });
-    return [];
-  }
+  const result = await fetchGitHubJson<GitHubSearchResponse>(
+    url,
+    env,
+    { requestName: 'GitHub repository search', query: sanitizedQuery },
+  );
 
-  if (!response.ok) {
-    logger.warn('GitHub search returned non-OK status', {
-      status: response.status,
-      query: sanitizedQuery,
-    });
-    return [];
-  }
+  if (!result.ok) return [];
 
-  let data: GitHubSearchResponse;
-  try {
-    data = (await response.json()) as GitHubSearchResponse;
-  } catch {
-    logger.warn('GitHub search response parse failed');
-    return [];
-  }
+  const data = result.data;
 
-  // Map repos and fetch READMEs in parallel
   const candidates = await Promise.all(
     data.items.map((repo) => mapRepoWithReadme(repo, env)),
   );
