@@ -254,6 +254,7 @@ function mapIssue(issue: GitHubIssue): RawCandidate {
     candidateTypeHint: 'issue',
     nextStepHint: 'Read the issue thread for confirmed workarounds, maintainer responses, and affected versions.',
     metadata: {
+      repositoryUrl: repositoryUrlFromApiUrl(issue.repository_url),
       createdDate: issue.created_at ? new Date(issue.created_at) : undefined,
       lastCommitDate: issue.updated_at ? new Date(issue.updated_at) : undefined,
       ownerType: issue.user.type === 'Organization' ? 'organization' : 'user',
@@ -266,6 +267,11 @@ function repoNameFromApiUrl(repositoryUrl: string): string {
   const markerIndex = repositoryUrl.indexOf(marker);
   if (markerIndex === -1) return repositoryUrl;
   return repositoryUrl.slice(markerIndex + marker.length);
+}
+
+function repositoryUrlFromApiUrl(repositoryUrl: string): string | undefined {
+  const repoName = repoNameFromApiUrl(repositoryUrl);
+  return repoName === repositoryUrl ? undefined : `https://github.com/${repoName}`;
 }
 
 function deduplicateById(candidates: readonly RawCandidate[]): readonly RawCandidate[] {
@@ -295,6 +301,7 @@ async function mapRepoWithReadme(
     readmeSnippet: readmeSnippet ?? undefined,
     provider: 'github',
     metadata: {
+      repositoryUrl: repo.html_url,
       stars: repo.stargazers_count,
       license: repo.license?.spdx_id ?? undefined,
       lastCommitDate: repo.pushed_at ? new Date(repo.pushed_at) : undefined,

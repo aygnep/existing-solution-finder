@@ -82,6 +82,7 @@ function mapNpmResult(obj: NpmSearchResult): RawCandidate {
     description: pkg.description ?? '',
     provider: 'npm',
     metadata: {
+      repositoryUrl: pkg.links.repository,
       lastCommitDate: pkg.date ? new Date(pkg.date) : undefined,
       hasInstallInstructions: true, // npm packages always have npm install
     },

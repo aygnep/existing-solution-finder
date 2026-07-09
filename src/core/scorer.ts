@@ -25,14 +25,15 @@ const SIX_MONTHS_MS = 180 * 24 * 60 * 60 * 1000;
 export function scoreCandidate(
   candidate: RawCandidate,
   problem: ParsedProblem,
+  nowMs = Date.now(),
 ): Score {
-  const breakdown = computeBreakdown(candidate, problem);
-  const penalties = computePenalties(candidate);
+  const breakdown = computeBreakdown(candidate, problem, nowMs);
+  const penalties = computePenalties(candidate, nowMs);
   const subtotal = sumBreakdown(breakdown);
   const penaltyTotal = penalties.reduce((sum, p) => sum + p.amount, 0);
   const total = subtotal + penaltyTotal;
   const displayTotal = Math.max(0, total);
-  const warnings = buildWarnings(candidate, penalties);
+  const warnings = buildWarnings(candidate, penalties, nowMs);
   const trustLevel = determineTrustLevel(candidate, displayTotal);
 
   return { breakdown, penalties, subtotal, total, displayTotal, trustLevel, warnings };
@@ -45,20 +46,25 @@ export function scoreCandidate(
 export function scoreAndAttach(
   candidate: RawCandidate,
   problem: ParsedProblem,
+  nowMs = Date.now(),
 ): ScoredCandidate {
-  return { ...candidate, score: scoreCandidate(candidate, problem) };
+  return { ...candidate, score: scoreCandidate(candidate, problem, nowMs) };
 }
 
 // ─── Breakdown computation ────────────────────────────────────────────────────
 
-function computeBreakdown(candidate: RawCandidate, problem: ParsedProblem): ScoreBreakdown {
+function computeBreakdown(
+  candidate: RawCandidate,
+  problem: ParsedProblem,
+  nowMs: number,
+): ScoreBreakdown {
   return {
     exactErrorMatch: scoreExactErrorMatch(candidate, problem),
     stackMatch: scoreStackMatch(candidate, problem),
     readmeEvidence: scoreReadmeEvidence(candidate, problem),
-    recency: scoreRecency(candidate),
+    recency: scoreRecency(candidate, nowMs),
     installationClarity: scoreInstallClarity(candidate),
-    maintenanceActivity: scoreMaintenanceActivity(candidate),
+    maintenanceActivity: scoreMaintenanceActivity(candidate, nowMs),
     exampleConfig: scoreExampleConfig(candidate),
   };
 }
@@ -125,11 +131,11 @@ function scoreReadmeEvidence(candidate: RawCandidate, problem: ParsedProblem): n
   return 0;
 }
 
-function scoreRecency(candidate: RawCandidate): number {
+function scoreRecency(candidate: RawCandidate, nowMs: number): number {
   const lastCommit = candidate.metadata.lastCommitDate;
   if (!lastCommit) return 3; // unknown; give benefit of doubt
 
-  const ageMs = Date.now() - lastCommit.getTime();
+  const ageMs = nowMs - lastCommit.getTime();
   if (ageMs < THREE_MONTHS_MS) return 10;
   if (ageMs < TWELVE_MONTHS_MS) return 7;
   if (ageMs < TWO_YEARS_MS) return 3;
@@ -152,11 +158,11 @@ function scoreInstallClarity(candidate: RawCandidate): number {
   return hasInstall ? 10 : 5;
 }
 
-function scoreMaintenanceActivity(candidate: RawCandidate): number {
+function scoreMaintenanceActivity(candidate: RawCandidate, nowMs: number): number {
   const lastCommit = candidate.metadata.lastCommitDate;
   if (!lastCommit) return 3;
 
-  const ageMs = Date.now() - lastCommit.getTime();
+  const ageMs = nowMs - lastCommit.getTime();
   const openIssues = candidate.metadata.openIssueCount ?? 0;
 
   if (ageMs < THREE_MONTHS_MS && openIssues < 50) return 10;
@@ -180,7 +186,7 @@ function scoreExampleConfig(candidate: RawCandidate): number {
 
 // ─── Penalties ────────────────────────────────────────────────────────────────
 
-function computePenalties(candidate: RawCandidate): readonly Penalty[] {
+function computePenalties(candidate: RawCandidate, nowMs: number): readonly Penalty[] {
   const penalties: Penalty[] = [];
   const { metadata } = candidate;
 
@@ -205,7 +211,7 @@ function computePenalties(candidate: RawCandidate): readonly Penalty[] {
   }
 
   if (metadata.lastCommitDate) {
-    const ageMs = Date.now() - metadata.lastCommitDate.getTime();
+    const ageMs = nowMs - metadata.lastCommitDate.getTime();
     if (ageMs > THREE_YEARS_MS) {
       penalties.push({ amount: -15, reason: 'Last commit > 3 years ago' });
     }
@@ -219,6 +225,7 @@ function computePenalties(candidate: RawCandidate): readonly Penalty[] {
 function buildWarnings(
   candidate: RawCandidate,
   penalties: readonly Penalty[],
+  nowMs: number,
 ): readonly SafetyWarning[] {
   const warnings: SafetyWarning[] = [];
   const { metadata } = candidate;
@@ -231,7 +238,7 @@ function buildWarnings(
   // Additional safety warnings (not penalties, just informational)
   const stars = metadata.stars ?? 0;
   const ageMonths = metadata.createdDate
-    ? (Date.now() - metadata.createdDate.getTime()) / (30 * 24 * 60 * 60 * 1000)
+    ? (nowMs - metadata.createdDate.getTime()) / (30 * 24 * 60 * 60 * 1000)
     : null;
 
   if (ageMonths !== null && ageMonths < 6 && stars < 100) {

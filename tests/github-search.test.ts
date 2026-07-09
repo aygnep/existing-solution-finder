@@ -302,6 +302,7 @@ describe('searchGitHub repository search hardening', () => {
       description: 'Fixes reasoning_content errors',
       provider: 'github',
       metadata: {
+        repositoryUrl: 'https://github.com/owner/fix-tool',
         stars: 42,
         license: 'MIT',
         isArchived: false,
@@ -353,6 +354,7 @@ describe('searchGitHubIssues', () => {
       candidateTypeHint: 'issue',
       nextStepHint: 'Read the issue thread for confirmed workarounds, maintainer responses, and affected versions.',
       metadata: {
+        repositoryUrl: 'https://github.com/owner/repo',
         ownerType: 'user',
       },
     });
