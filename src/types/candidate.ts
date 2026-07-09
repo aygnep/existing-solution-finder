@@ -36,6 +36,8 @@ export interface RawCandidate {
 
 /** Metadata used by the scorer. All fields are optional — providers may not have all info. */
 export interface CandidateMetadata {
+  /** Canonical repository URL when this candidate refers to a repository or issue. */
+  readonly repositoryUrl?: string;
   readonly stars?: number;
   readonly license?: string;
   readonly lastCommitDate?: Date;
