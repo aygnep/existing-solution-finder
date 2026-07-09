@@ -2,12 +2,13 @@ import { generateQueries } from './query-generator.js';
 import { parseProblem } from './problem-parser.js';
 import { rankCandidates } from './ranker.js';
 import { scoreAndAttach } from './scorer.js';
+import { groupSolutions } from './solution-grouper.js';
+import { createValidationSteps } from './validation-guidance.js';
 import {
   buildDiscoveryRequest,
   type DiscoveryRequest,
   type DiscoveryResult,
   type ProviderStatus,
-  type SolutionCandidate,
 } from '../types/discovery.js';
 import type { Provider, Query, RawCandidate } from '../types/candidate.js';
 
@@ -60,7 +61,10 @@ export async function discoverSolutions(
       providers: query.providers,
     })),
     providerStatus: runs.map(({ raw: _raw, ...status }) => status),
-    candidates: ranked.map((candidate) => toSingletonSolution(candidate, options.now)),
+    candidates: groupSolutions(ranked, options.now).map((candidate) => ({
+      ...candidate,
+      validationSteps: createValidationSteps(candidate),
+    })),
     completedAt: options.now.toISOString(),
   };
 }
@@ -99,29 +103,6 @@ function buildProblemText(request: DiscoveryRequest): string {
   if (request.stack.length > 0) sections.push(`Stack: ${request.stack.join(', ')}`);
   if (request.constraints.length > 0) sections.push(`Constraints: ${request.constraints.join(', ')}`);
   return sections.join('\n');
-}
-
-function toSingletonSolution(
-  candidate: ReturnType<typeof rankCandidates>[number],
-  now: Date,
-): SolutionCandidate {
-  return {
-    ...candidate,
-    solutionKey: normalizeSolutionKey(candidate.metadata.repositoryUrl ?? candidate.url),
-    evidence: [{
-      sourceUrl: candidate.url,
-      sourceKind: candidate.provider,
-      title: candidate.name,
-      excerpt: candidate.readmeSnippet ?? candidate.description,
-      retrievedAt: now.toISOString(),
-    }],
-    relatedCandidates: [candidate],
-    validationSteps: [],
-  };
-}
-
-function normalizeSolutionKey(url: string): string {
-  return url.toLowerCase().replace(/\/$/, '').replace(/\.git$/, '');
 }
 
 function safeMessage(error: unknown): string {
