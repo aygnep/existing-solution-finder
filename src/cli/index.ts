@@ -1,14 +1,11 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { logger } from '../utils/logger.js';
-import { parseProblem } from '../core/problem-parser.js';
-import { generateQueries } from '../core/query-generator.js';
-import { scoreAndAttach } from '../core/scorer.js';
-import { rankCandidates } from '../core/ranker.js';
+import { discoverSolutions, type DiscoverySearchers } from '../core/discovery-service.js';
 import { summarize } from '../core/summarizer.js';
 import { createMockProvider, getBuiltinMockCandidates } from '../providers/mock-provider.js';
 import { parseLanguage, t } from '../i18n/messages.js';
-import type { Provider, RawCandidate } from '../types/candidate.js';
+import type { Provider, Query } from '../types/candidate.js';
 import type { Language } from '../i18n/types.js';
 
 const VALID_PROVIDERS: readonly Provider[] = ['github', 'web', 'npm'];
@@ -115,108 +112,58 @@ export async function runSolve(
   }
 
   logger.info('Analyzing problem...', { length: problemText.length });
-
-  const problem = parseProblem(problemText);
-  logger.debug('Parsed problem', {
-    errorTokens: problem.errorTokens.length,
-    stackNames: problem.stackNames.length,
-    keywords: problem.keywords.length,
+  const searchers = useMock ? createMockSearchers() : await createRealSearchers();
+  const result = await discoverSolutions({
+    request: {
+      problem: problemText,
+      stack: [],
+      constraints: [],
+      providers: selectedProvider ? [selectedProvider] : VALID_PROVIDERS,
+      mode: useMock ? 'mock' : 'real',
+      maxResults: parseInt(options.maxResults, 10),
+    },
+    now: new Date(),
+    searchers,
   });
 
-  const queries = generateQueries(problem);
-  logger.info(`Generated ${queries.length} queries`);
-
-  let allCandidates: RawCandidate[];
-
-  if (useMock) {
-    logger.info(t(lang, 'mockMode') + ' (no real API calls)');
-    const mockSearch = createMockProvider(getBuiltinMockCandidates());
-    const results = await Promise.all(queries.map((q) => mockSearch(q)));
-    allCandidates = results.flat();
-  } else {
-    allCandidates = await searchRealProviders(queries, selectedProvider, lang, io);
-    if (allCandidates.length === 0 && process.exitCode === 1) return 1;
-  }
-
-  logger.info(`Found ${allCandidates.length} raw candidates`);
-
-  const scored = allCandidates.map((c) => scoreAndAttach(c, problem));
-  const ranked = rankCandidates(scored, {
-    maxResults: parseInt(options.maxResults, 10),
-  });
-
-  io.stdout.write(summarize(ranked, problem, { lang }));
+  io.stdout.write(summarize(result.candidates, result.parsedProblem, { lang }));
   return 0;
 }
 
-async function searchRealProviders(
-  queries: ReturnType<typeof generateQueries>,
-  selectedProvider: Provider | undefined,
-  lang: Language,
-  io: CliIo,
-): Promise<RawCandidate[]> {
+function createMockSearchers(): DiscoverySearchers {
+  const mockSearch = createMockProvider(getBuiltinMockCandidates());
+  return createSearchersFromQueryFunction((provider, queries) =>
+    Promise.all(queries.map((query) => mockSearch(query))).then((results) =>
+      results.flat().filter((candidate) => candidate.provider === provider),
+    ),
+  );
+}
+
+async function createRealSearchers(): Promise<DiscoverySearchers> {
   const { loadEnv } = await import('../utils/env.js');
-
-  let env;
-  try {
-    env = loadEnv();
-  } catch (err) {
-    io.stderr.write(String(err) + '\n');
-    process.exitCode = 1;
-    return [];
-  }
-
-  const needsGitHub = !selectedProvider || selectedProvider === 'github';
-  if (needsGitHub && !env.GITHUB_TOKEN) {
-    io.stderr.write(
-      `${t(lang, 'error')}: ${t(lang, 'missingGithubToken')}.\n` +
-        'Create a token at https://github.com/settings/tokens (scope: public_repo)\n' +
-        'Then run: GITHUB_TOKEN=your_token fixseek --real "your problem"\n',
-    );
-    process.exitCode = 1;
-    return [];
-  }
-
+  const env = loadEnv();
   const { searchGitHubMultiQuery } = await import('../providers/github-search.js');
   const { searchWeb } = await import('../providers/web-search.js');
   const { searchPackages } = await import('../providers/package-search.js');
-  const allCandidates: RawCandidate[] = [];
+  return {
+    github: async (queries) => env.GITHUB_TOKEN
+      ? searchGitHubMultiQuery(queries, env)
+      : { raw: [], state: 'skipped', message: 'GitHub token is not configured.' },
+    web: async (queries) => env.WEB_SEARCH_API_KEY
+      ? (await Promise.all(queries.map((query) => searchWeb(query, env)))).flat()
+      : { raw: [], state: 'skipped', message: 'Web search key is not configured.' },
+    npm: async (queries) => (await Promise.all(queries.map((query) => searchPackages(query, env)))).flat(),
+  };
+}
 
-  if (!selectedProvider || selectedProvider === 'github') {
-    const githubQueries = queries.filter((q) => q.providers.includes('github'));
-    try {
-      allCandidates.push(...await searchGitHubMultiQuery(githubQueries, env));
-    } catch (err: unknown) {
-      logger.warn('GitHub search failed', { error: String(err) });
-    }
-  }
-
-  const otherPromises = queries.flatMap((query) => {
-    const promises: Promise<void>[] = [];
-
-    if (query.providers.includes('web') && (!selectedProvider || selectedProvider === 'web')) {
-      promises.push(
-        searchWeb(query, env).then((results) => {
-          allCandidates.push(...results);
-        }).catch((err: unknown) => {
-          logger.warn('Web search failed', { error: String(err) });
-        }),
-      );
-    }
-    if (query.providers.includes('npm') && (!selectedProvider || selectedProvider === 'npm')) {
-      promises.push(
-        searchPackages(query, env).then((results) => {
-          allCandidates.push(...results);
-        }).catch((err: unknown) => {
-          logger.warn('npm search failed', { error: String(err) });
-        }),
-      );
-    }
-    return promises;
-  });
-
-  await Promise.all(otherPromises);
-  return allCandidates;
+function createSearchersFromQueryFunction(
+  search: (provider: Provider, queries: readonly Query[]) => Promise<readonly import('../types/candidate.js').RawCandidate[]>,
+): DiscoverySearchers {
+  return {
+    github: (queries) => search('github', queries),
+    web: (queries) => search('web', queries),
+    npm: (queries) => search('npm', queries),
+  };
 }
 
 function addSolveOptions(command: Command): void {
