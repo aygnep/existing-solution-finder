@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
 import { logger } from '../utils/logger.js';
-import { discoverSolutions, type DiscoverySearchers } from '../core/discovery-service.js';
+import { discoverSolutions } from '../core/discovery-service.js';
 import { summarize } from '../core/summarizer.js';
-import { createMockProvider, getBuiltinMockCandidates } from '../providers/mock-provider.js';
+import { createDiscoverySearchers } from '../providers/discovery-searchers.js';
 import { parseLanguage, t } from '../i18n/messages.js';
-import type { Provider, Query } from '../types/candidate.js';
+import type { Provider } from '../types/candidate.js';
 import type { Language } from '../i18n/types.js';
 
 const VALID_PROVIDERS: readonly Provider[] = ['github', 'web', 'npm'];
@@ -112,7 +112,7 @@ export async function runSolve(
   }
 
   logger.info('Analyzing problem...', { length: problemText.length });
-  const searchers = useMock ? createMockSearchers() : await createRealSearchers();
+  const searchers = await createDiscoverySearchers(useMock ? 'mock' : 'real');
   const result = await discoverSolutions({
     request: {
       problem: problemText,
@@ -128,42 +128,6 @@ export async function runSolve(
 
   io.stdout.write(summarize(result.candidates, result.parsedProblem, { lang }));
   return 0;
-}
-
-function createMockSearchers(): DiscoverySearchers {
-  const mockSearch = createMockProvider(getBuiltinMockCandidates());
-  return createSearchersFromQueryFunction((provider, queries) =>
-    Promise.all(queries.map((query) => mockSearch(query))).then((results) =>
-      results.flat().filter((candidate) => candidate.provider === provider),
-    ),
-  );
-}
-
-async function createRealSearchers(): Promise<DiscoverySearchers> {
-  const { loadEnv } = await import('../utils/env.js');
-  const env = loadEnv();
-  const { searchGitHubMultiQuery } = await import('../providers/github-search.js');
-  const { searchWeb } = await import('../providers/web-search.js');
-  const { searchPackages } = await import('../providers/package-search.js');
-  return {
-    github: async (queries) => env.GITHUB_TOKEN
-      ? searchGitHubMultiQuery(queries, env)
-      : { raw: [], state: 'skipped', message: 'GitHub token is not configured.' },
-    web: async (queries) => env.WEB_SEARCH_API_KEY
-      ? (await Promise.all(queries.map((query) => searchWeb(query, env)))).flat()
-      : { raw: [], state: 'skipped', message: 'Web search key is not configured.' },
-    npm: async (queries) => (await Promise.all(queries.map((query) => searchPackages(query, env)))).flat(),
-  };
-}
-
-function createSearchersFromQueryFunction(
-  search: (provider: Provider, queries: readonly Query[]) => Promise<readonly import('../types/candidate.js').RawCandidate[]>,
-): DiscoverySearchers {
-  return {
-    github: (queries) => search('github', queries),
-    web: (queries) => search('web', queries),
-    npm: (queries) => search('npm', queries),
-  };
 }
 
 function addSolveOptions(command: Command): void {

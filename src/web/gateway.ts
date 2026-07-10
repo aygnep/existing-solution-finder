@@ -1,10 +1,7 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { discoverSolutions, type DiscoverySearchers } from '../core/discovery-service.js';
-import { searchGitHubMultiQuery } from '../providers/github-search.js';
-import { searchPackages } from '../providers/package-search.js';
-import { searchWeb } from '../providers/web-search.js';
-import { loadEnv } from '../utils/env.js';
+import { discoverSolutions } from '../core/discovery-service.js';
+import { createDiscoverySearchers } from '../providers/discovery-searchers.js';
 import { buildDiscoveryRequest, type DiscoveryRequest, type DiscoveryResult } from '../types/discovery.js';
 
 const requestSchema = z.object({
@@ -40,17 +37,7 @@ export function createGateway(dependencies: GatewayDependencies = {}): FastifyIn
 }
 
 async function discoverFromEnvironment(request: DiscoveryRequest): Promise<DiscoveryResult> {
-  const env = loadEnv();
-  const searchers: DiscoverySearchers = {
-    github: async (queries) => env.GITHUB_TOKEN
-      ? searchGitHubMultiQuery(queries, env)
-      : { raw: [], state: 'skipped', message: 'GitHub token is not configured.' },
-    web: async (queries) => env.WEB_SEARCH_API_KEY
-      ? (await Promise.all(queries.map((query) => searchWeb(query, env)))).flat()
-      : { raw: [], state: 'skipped', message: 'Web search key is not configured.' },
-    npm: async (queries) => (await Promise.all(queries.map((query) => searchPackages(query, env)))).flat(),
-  };
-
+  const searchers = await createDiscoverySearchers(request.mode);
   return discoverSolutions({ request, now: new Date(), searchers });
 }
 

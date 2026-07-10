@@ -19,6 +19,19 @@ const fixtureRequest = {
 };
 
 describe('web gateway', () => {
+  it('uses deterministic mock candidates for mock-mode requests', async () => {
+    const app = createGateway();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/discover',
+      payload: { ...fixtureRequest, problem: 'reasoning_content error with Claude Code', providers: ['github'], mode: 'mock' },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json().candidates.map((candidate: { name: string }) => candidate.name)).toContain('oc-go-cc');
+    await app.close();
+  });
+
   it('returns a structured result for a valid discovery request', async () => {
     const app = createGateway({ discover: async () => fixtureResult });
     const response = await app.inject({ method: 'POST', url: '/api/discover', payload: fixtureRequest });
