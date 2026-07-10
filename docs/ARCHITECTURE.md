@@ -1,146 +1,51 @@
 # Architecture
 
-## Overview
+## System Shape
 
-```
-User Input (CLI)
-      │
-      ▼
-┌─────────────────┐
-│  problem-parser  │  Extracts: error tokens, stack names, constraints
-└────────┬────────┘
-         │ ParsedProblem
-         ▼
-┌─────────────────┐
-│ query-generator  │  Produces N queries across 5 categories
-└────────┬────────┘
-         │ Query[]
-         ▼
-┌──────────────────────────────────────┐
-│              Providers               │
-│  github-search  web-search  pkg-search│
-└────────────────┬─────────────────────┘
-                 │ RawCandidate[]
-                 ▼
-┌─────────────────┐
-│     scorer       │  Applies SCORING_RULES.md, produces Score
-└────────┬────────┘
-         │ ScoredCandidate[]
-         ▼
-┌─────────────────┐
-│     ranker       │  Sorts, deduplicates, applies penalties
-└────────┬────────┘
-         │ RankedCandidate[]
-         ▼
-┌─────────────────┐
-│   summarizer     │  Formats human-readable output
-└────────┬────────┘
-         │
-         ▼
-     CLI Output / DiscoveryResult JSON
-```
+~~~text
+CLI or local Web UI
+        ↓
+DiscoveryRequest
+        ↓
+discovery-service
+parse → query plan → provider runs → score → rank → group → validation
+        ↓
+DiscoveryResult
+  ├─ CLI summarizer
+  ├─ Fastify gateway: POST /api/discover
+  └─ React Web Solution Guide and Markdown exporters
+~~~
 
-## Module Responsibilities
+CLI and Web use the same discovery service. UI code must not create separate
+scoring or safety behavior.
 
-### `src/cli/index.ts`
-- Parse CLI arguments via `commander`
-- Load `.env` via `dotenv`
-- Orchestrate the pipeline (parse → query → search → score → rank → summarize)
-- Supports `--mock` (default) and `--real` modes
-- Supports `--provider github|web|npm` to limit search scope
-- Validates `GITHUB_TOKEN` when `--real` + GitHub provider is needed
-- Uses `searchGitHubMultiQuery` for cross-query deduplication
-- Print results to stdout
-- Exit with code 1 on fatal errors
+## Module Map
 
-### `src/core/problem-parser.ts`
-- Pure function: `parseProblem(input: string): ParsedProblem`
-- Extracts error messages, stack traces, tech names, version numbers
-- No external dependencies (pure string processing)
+| Area | Files | Responsibility |
+| --- | --- | --- |
+| Contract | src/types/discovery.ts | Request, plan, provider status, evidence, solution, and result types |
+| Orchestration | src/core/discovery-service.ts | Parse, query, isolated provider runs, score, rank, group, validation |
+| Trust | scorer.ts, ranker.ts | Deterministic fit, maintenance, safety penalties, order, explanation |
+| Evidence | solution-grouper.ts, validation-guidance.ts | Conservative canonical-URL grouping and non-executing validation |
+| Providers | src/providers/ | External I/O and mock or real provider factory |
+| Web | src/web/gateway.ts, web/src/ | Local credential boundary and session-only React workflow |
+| Exports | src/exports/solution-report.ts | Sourced report and agent-skill draft |
 
-### `src/core/query-generator.ts`
-- Pure function: `generateQueries(problem: ParsedProblem): Query[]`
-- Produces queries in 5 categories (see `SEARCH_STRATEGY.md`)
-- No external I/O
+## Provider Behavior
 
-### `src/core/scorer.ts`
-- Pure function: `scoreCandidate(candidate: RawCandidate, problem: ParsedProblem): Score`
-- Applies rules from `SCORING_RULES.md`
-- Returns a structured `Score` object with field-level breakdown
+Mock mode is deterministic. Real mode uses GitHub when GITHUB_TOKEN exists,
+npm without a credential, and optional web search when WEB_SEARCH_API_KEY
+exists. Missing credentials produce skipped; runtime problems produce failed;
+both preserve results from other providers.
 
-### `src/core/ranker.ts`
-- Pure function: `rankCandidates(candidates: ScoredCandidate[]): RankedCandidate[]`
-- Deduplicates by URL
-- Sorts by total score descending
-- Caps output at configurable N (default 10)
+## Local Web Runtime
 
-### `src/core/summarizer.ts`
-- Pure function: `summarize(candidates: RankedCandidate[], problem: ParsedProblem): string`
-- Produces human-readable CLI output
-- Formats warnings clearly
+React/Vite listens on 127.0.0.1:5173. Fastify listens on 127.0.0.1:4174.
+The browser never receives provider keys or persistent storage.
 
-### `src/providers/github-search.ts`
-- Calls GitHub Search API for repositories and issues
-- Requires `GITHUB_TOKEN` (only in `--real` mode)
-- Sanitizes queries: removes `site:` prefixes, strips long error-log tokens, truncates to 256 chars
-- Repository search fetches README from `raw.githubusercontent.com` for each repo result
-- Repository search extracts metadata from README: install instructions, example config, suspicious install scripts
-- Issue search maps GitHub issues into `RawCandidate` objects with `candidateTypeHint: 'issue'`
-- Deduplicates mixed GitHub results by stable candidate ID
-- Exports: `searchGitHub`, `searchGitHubIssues`, `searchGitHubMultiQuery`, `sanitizeGitHubQuery`, `deduplicateByFullName`, `extractReadmeMetadata`
-- Returns `RawCandidate[]`
+## Invariants
 
-### `src/providers/web-search.ts`
-- Calls configured web search provider (Brave / SerpAPI)
-- Returns `RawCandidate[]`
-
-### `src/providers/package-search.ts`
-- Calls npm registry search API
-- No auth required
-- Returns `RawCandidate[]`
-
-## Data Flow Types
-
-See `src/types/` for full TypeScript definitions.
-
-```
-string (raw input)
-  → ParsedProblem
-  → Query[]
-  → RawCandidate[]      (per provider)
-  → ScoredCandidate[]   (after scorer)
-  → RankedCandidate[]   (after ranker)
-  → DiscoveryResult     (plan, provider status, grouped evidence, risks)
-  → CLI string output or local Web gateway response
-```
-
-## Provider Pipeline
-
-The search layer operates in two modes:
-
-### Mock Mode (default)
-1. `generateQueries` produces `Query[]` for the problem.
-2. `createMockProvider(getBuiltinMockCandidates())` returns a search function.
-3. Each query runs against the mock provider; results are concatenated.
-4. No network calls. No API keys required.
-
-### Real Mode (`--real`)
-1. `generateQueries` produces `Query[]` for the problem.
-2. CLI filters queries by `--provider` if specified.
-3. GitHub queries are batched to `searchGitHubMultiQuery`:
-   - Queries are sanitized (`sanitizeGitHubQuery`) to remove `site:` prefixes and error logs.
-   - `github-issues` category queries call the GitHub Issues Search API.
-   - Other GitHub queries call the GitHub Repository Search API.
-   - Repository candidates include README metadata when README fetch succeeds.
-   - Issue candidates include `candidateTypeHint: 'issue'` and issue body snippets when available.
-   - Mixed GitHub results are deduplicated by stable candidate ID.
-4. Web and npm queries run per-query in parallel via `searchWeb` and `searchPackages`.
-5. All candidate arrays are concatenated and passed to the scorer.
-
-## Design Principles
-
-1. **Pure core** — `core/` modules are pure functions with no side effects. Easy to test.
-2. **Injectable providers** — providers are passed as dependencies, not imported globally.
-3. **Fail gracefully** — if one provider fails, log a warning and continue with others.
-4. **No magic globals** — all config flows through typed `Env` object (see `src/utils/env.ts`).
-5. **Types over comments** — use TypeScript types to document data shapes.
+1. Core behavior is deterministic and typed.
+2. Provider code owns network I/O.
+3. Scores, warnings, and evidence remain visible in exports.
+4. Users decide whether to execute a candidate.

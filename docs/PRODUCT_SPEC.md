@@ -1,44 +1,42 @@
-# Product Spec
+# Product Specification
 
-## Goal
+## Promise
 
-Help developers find existing tools, GitHub projects, issues, and workarounds that can solve their current technical problem.
+Fixseek helps developers and coding agents discover existing technical
+solutions before building from scratch. It turns a problem description or error
+log into traceable repositories, packages, issues, documentation, and
+workarounds.
 
-The core insight: most problems developers encounter have already been solved somewhere on GitHub, npm, or the internet. The bottleneck is *finding* those solutions quickly and evaluating whether they are safe and relevant. This tool automates that search and provides a ranked, annotated result set.
+The product optimizes for an auditable decision, not an unsupported answer:
+recommendations show evidence, fit signals, risks, and safe validation steps.
 
-## Input
+## Interfaces and Inputs
 
-- **Error logs** — raw text from terminal, CI, or runtime
-- **Natural language descriptions** — "I need a proxy that rewrites OpenAI API responses to strip reasoning_content fields"
-- **Tech stack context** — e.g., `Node.js 20, Docker Compose, Claude Code, DeepSeek`
-- **Constraints** — e.g., "must be open source", "no cloud dependency", "must work offline"
+- Developers use the CLI or the local Web Solution Guide.
+- Coding agents consume exported skill drafts and must not treat a result as
+  permission to execute it.
+- Inputs are problem text, error logs, optional stack and constraints, selected
+  providers, and mock or real mode.
 
-## Output
+## Result
 
-For each candidate result:
+DiscoveryResult contains a parsed problem, visible search plan, per-provider
+state, grouped candidates, source URLs and excerpts, score details, warnings,
+and validation guidance. The Web UI can export selected candidates as a
+Markdown report or agent-skill draft.
 
-- **Name & link** — repository URL, npm package, or documentation page
-- **Why it matches** — concise explanation of the relevance
-- **Risk summary** — known issues, license concerns, maintenance status
-- **Installation instructions** — copy-pasteable commands where available
-- **Suggested next step** — e.g., "Read the README section on proxy configuration"
+## Safety Boundaries
 
-The full output is a ranked list of candidates, ordered by composite score (see `SCORING_RULES.md`).
+- Never install, clone, execute, or modify a candidate automatically.
+- Never expose provider credentials to the browser, output, logs, or exports.
+- Never hide archival, licensing, suspicious-install, or secret-transmission
+  risks.
+- Provider failure is visible partial state, not a fabricated answer.
 
-## Non-Goals
+## Scope
 
-- **Do not automatically install unknown tools.** Users must review and confirm before installation.
-- **Do not run arbitrary code from GitHub.** No exec, no eval, no piping to bash without explicit user consent.
-- **Do not expose API keys.** Keys must remain in `.env` and never appear in logs, output, or network requests to third-party services beyond their intended provider.
-- **Do not claim a tool is safe without evidence.** Safety assessments are probabilistic and must be labeled as such.
-- **Do not introduce a database in MVP.** Results are ephemeral; no persistence layer.
-- **Do not add authentication in MVP.** This is a local CLI tool, not a multi-tenant service.
-- **Do not build a frontend in MVP.** CLI output only until explicitly requested.
+Included: local CLI, local no-account Web Solution Guide, GitHub, npm, optional
+web providers, deterministic ranking, and ephemeral sessions.
 
-## Success Criteria (MVP)
-
-1. Given a problem string, returns ≥ 3 relevant candidates within 15 seconds.
-2. Each candidate has a score ≥ 0 and a one-sentence reason.
-3. Safety warnings appear for archived repos, no-license projects, and suspicious install scripts.
-4. No API keys appear in stdout, stderr, or log files.
-5. All core modules (parser, query generator, scorer) have passing unit tests.
+Deferred: persistence, accounts, teams, private sources, authentication,
+automatic remediation, and LLM control over search, scoring, or safety.
