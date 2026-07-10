@@ -36,8 +36,8 @@ The current implementation supports:
 
 The product is past the original local mock MVP and close to a 0.1 CLI release
 candidate. The next work should focus on real result quality, provider
-reliability, and release confidence rather than adding a frontend or broad new
-platform features.
+reliability, the approved no-account local Web Solution Guide, and release
+confidence rather than broad platform features.
 
 ## Short-Term Goals
 
@@ -129,9 +129,11 @@ tooling.
 
 ### Web UI
 
-A web UI should wait until the CLI search pipeline is stable. If added, it should
-visualize ranked candidates, warnings, and evidence rather than replace the CLI
-as the core product.
+The first local Web Solution Guide is now approved and implemented alongside the
+CLI. It visualizes an editable search plan, provider state, ranked candidates,
+evidence, warnings, validation steps, and report/skill exports. It must consume
+the shared discovery contract rather than replacing the CLI core. Accounts,
+history, private sources, and team collaboration remain deferred.
 
 ## Agent Handoff Notes
 
@@ -191,8 +193,8 @@ Do not run `npm publish` unless the maintainer explicitly intends to publish.
 ### Guardrails
 
 - Keep core modules pure when possible.
-- Do not add a database, authentication, plugin system, or frontend for the
-  current CLI-focused phase.
+- Do not add a database, authentication, or a broad plugin system. The approved
+  local Web Solution Guide is the exception to the previous CLI-only boundary.
 - Do not run downloaded code, clone unknown repositories automatically, or hide
   safety warnings.
 - Update the relevant docs when behavior changes.

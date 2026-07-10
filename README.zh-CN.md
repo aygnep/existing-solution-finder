@@ -105,6 +105,18 @@ npm test
 npm run typecheck
 ```
 
+### Web 解决方案向导（本地预览）
+
+无账号的 Web 解决方案向导会将一个技术问题转成可查看的搜索计划、带证据的候选方案、安全警告，以及可下载的 Markdown 报告或 agent skill 草稿。
+
+```bash
+npm install
+npm run build
+npm run web:dev
+```
+
+打开 <http://127.0.0.1:5173>。本地网关监听 4174 端口，provider 密钥始终留在浏览器之外；会话默认不会持久化。mock 模式确定且无需凭据，real 模式使用上文列出的环境变量。
+
 当前 GitHub 仓库仍是：
 [aygnep/existing-solution-finder](https://github.com/aygnep/existing-solution-finder)。
 产品名已经统一为 Fixseek，仓库名之后可以再决定是否迁移。

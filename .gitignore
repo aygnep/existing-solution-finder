@@ -7,3 +7,5 @@ coverage/
 .DS_Store
 *.txt
 .worktrees/
+test-results/
+playwright-report/

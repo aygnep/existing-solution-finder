@@ -37,7 +37,7 @@ User Input (CLI)
 └────────┬────────┘
          │
          ▼
-     CLI Output
+     CLI Output / DiscoveryResult JSON
 ```
 
 ## Module Responsibilities
@@ -110,7 +110,8 @@ string (raw input)
   → RawCandidate[]      (per provider)
   → ScoredCandidate[]   (after scorer)
   → RankedCandidate[]   (after ranker)
-  → string (output)
+  → DiscoveryResult     (plan, provider status, grouped evidence, risks)
+  → CLI string output or local Web gateway response
 ```
 
 ## Provider Pipeline

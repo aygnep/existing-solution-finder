@@ -119,6 +119,23 @@ npm test
 npm run typecheck
 ```
 
+### Web Solution Guide (local preview)
+
+The no-account Web Solution Guide turns one technical problem into a visible
+search plan, evidence-backed candidates, safety warnings, and downloadable
+Markdown report or agent-skill draft.
+
+```bash
+npm install
+npm run build
+npm run web:dev
+```
+
+Open <http://127.0.0.1:5173>. The local gateway listens on port 4174 and keeps
+provider credentials outside the browser. Web sessions are not persisted. Mock
+mode is deterministic and needs no credentials; real mode uses the environment
+variables listed above.
+
 The GitHub repository is currently:
 [aygnep/existing-solution-finder](https://github.com/aygnep/existing-solution-finder).
 The product name is Fixseek; the repository may be renamed later.
