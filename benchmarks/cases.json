@@ -1,0 +1,67 @@
+[
+  {
+    "id": "deepseek-reasoning-content",
+    "problem": "reasoning_content error Claude Code DeepSeek",
+    "stack": ["Claude Code", "DeepSeek"],
+    "constraints": ["local proxy only"],
+    "providers": ["github", "web"],
+    "maxResults": 10,
+    "topN": 5,
+    "requiredProviders": ["github"],
+    "approvedCandidates": [
+      { "url": "https://github.com/Whale-Dolphin/deepseek-reasoning-proxy" }
+    ]
+  },
+  {
+    "id": "deepseek-opencode-bridge",
+    "problem": "DeepSeek V4 OpenCode Go Claude Code compatibility bridge",
+    "stack": ["Claude Code", "OpenCode Go", "DeepSeek"],
+    "constraints": ["Anthropic-compatible client"],
+    "providers": ["github", "web"],
+    "maxResults": 10,
+    "topN": 5,
+    "requiredProviders": ["github"],
+    "approvedCandidates": [
+      { "url": "https://github.com/superheroYu/deepseek-v4-opencode-claude-code-bridge" }
+    ]
+  },
+  {
+    "id": "esm-commonjs-vite",
+    "problem": "Vite package ESM CommonJS interop during SSR",
+    "stack": ["Vite", "Node.js"],
+    "constraints": ["package solution"],
+    "providers": ["github", "npm"],
+    "maxResults": 10,
+    "topN": 5,
+    "requiredProviders": ["npm"],
+    "approvedCandidates": [
+      { "name": "vite-plugin-cjs-interop" }
+    ]
+  },
+  {
+    "id": "textlint-module-interop",
+    "problem": "ECMAScript module interop library package",
+    "stack": ["Node.js"],
+    "constraints": ["published npm package"],
+    "providers": ["npm"],
+    "maxResults": 10,
+    "topN": 5,
+    "requiredProviders": ["npm"],
+    "approvedCandidates": [
+      { "name": "@textlint/module-interop" }
+    ]
+  },
+  {
+    "id": "vite-plugin-resolution",
+    "problem": "vite module not found after pnpm install",
+    "stack": ["Vite", "pnpm"],
+    "constraints": ["prefer package documentation"],
+    "providers": ["github", "npm"],
+    "maxResults": 10,
+    "topN": 5,
+    "requiredProviders": ["github", "npm"],
+    "approvedCandidates": [
+      { "url": "https://github.com/adesege/vite-plugin-laravel-i18next" }
+    ]
+  }
+]
