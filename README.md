@@ -119,6 +119,29 @@ npm test
 npm run typecheck
 ```
 
+### Real quality benchmark
+
+With `GITHUB_TOKEN` and optional web-search credentials in `.env`, run:
+
+```bash
+npm run benchmark:real
+```
+
+The command calls real providers and prints a redacted JSON evaluation report.
+It exits with `2` for an evaluated quality regression and `3` when a required
+provider is unavailable, skipped, rate-limited, or fails. It never changes the
+approved snapshot.
+
+After reviewing a current report and intentionally accepting it, update the
+tracked baseline:
+
+```bash
+npm run benchmark:update
+```
+
+Never use the update command to hide a regression; inspect and commit the
+snapshot diff only after human review.
+
 ### Web Solution Guide (local preview)
 
 The no-account Web Solution Guide turns one technical problem into a visible

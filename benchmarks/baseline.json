@@ -1,0 +1,731 @@
+{
+  "cases": [
+    {
+      "id": "deepseek-reasoning-content",
+      "requiredProviders": [
+        "github"
+      ],
+      "relevance": {
+        "passed": true
+      },
+      "safety": {
+        "passed": true
+      },
+      "providerCoverage": {
+        "configured": 2,
+        "completedWithResults": 1
+      },
+      "outcome": "passed",
+      "elapsedMs": 8012,
+      "providers": [
+        {
+          "provider": "github",
+          "state": "complete",
+          "resultCount": 68
+        },
+        {
+          "provider": "web",
+          "state": "empty",
+          "resultCount": 0
+        }
+      ],
+      "candidates": [
+        {
+          "url": "https://github.com/Whale-Dolphin/deepseek-reasoning-proxy",
+          "name": "Whale-Dolphin/deepseek-reasoning-proxy",
+          "provider": "github",
+          "score": 100,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/zzxx-husky/xiaomi-mimo-proxy",
+          "name": "zzxx-husky/xiaomi-mimo-proxy",
+          "provider": "github",
+          "score": 92,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/windycn/xiaomi-mimo-proxy",
+          "name": "windycn/xiaomi-mimo-proxy",
+          "provider": "github",
+          "score": 92,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/superheroYu/deepseek-v4-opencode-claude-code-bridge",
+          "name": "superheroYu/deepseek-v4-opencode-claude-code-bridge",
+          "provider": "github",
+          "score": 90,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/laichunpongben/deepseek-reasoning-proxy",
+          "name": "laichunpongben/deepseek-reasoning-proxy",
+          "provider": "github",
+          "score": 90,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/HosheaLi/dsv4-cc-proxy",
+          "name": "HosheaLi/dsv4-cc-proxy",
+          "provider": "github",
+          "score": 90,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/Vanishia/Reasoning-Content-Proxy",
+          "name": "Vanishia/Reasoning-Content-Proxy",
+          "provider": "github",
+          "score": 90,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/lizhun781021/mimo-anthropic-proxy",
+          "name": "lizhun781021/mimo-anthropic-proxy",
+          "provider": "github",
+          "score": 87,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/tomats13/MimoSwitch",
+          "name": "tomats13/MimoSwitch",
+          "provider": "github",
+          "score": 77,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/some93/MiMo-Proxy",
+          "name": "some93/MiMo-Proxy",
+          "provider": "github",
+          "score": 77,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "deepseek-opencode-bridge",
+      "requiredProviders": [
+        "github"
+      ],
+      "relevance": {
+        "passed": false
+      },
+      "safety": {
+        "passed": true
+      },
+      "providerCoverage": {
+        "configured": 2,
+        "completedWithResults": 1
+      },
+      "outcome": "passed",
+      "elapsedMs": 11630,
+      "providers": [
+        {
+          "provider": "github",
+          "state": "complete",
+          "resultCount": 46
+        },
+        {
+          "provider": "web",
+          "state": "empty",
+          "resultCount": 0
+        }
+      ],
+      "candidates": [
+        {
+          "url": "https://github.com/routatic/proxy",
+          "name": "routatic/proxy",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "HIGH",
+          "penaltyCount": 0,
+          "warningCategories": []
+        },
+        {
+          "url": "https://github.com/ethan-blue/open-code-go-tools",
+          "name": "ethan-blue/open-code-go-tools",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/az8863566/cc-proxy",
+          "name": "az8863566/cc-proxy",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/emanuelcasco/ocgo",
+          "name": "emanuelcasco/ocgo",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/0xjacq/opencode-go-reverse-proxy",
+          "name": "0xjacq/opencode-go-reverse-proxy",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/ahsanjamee/opencode-go-claude-proxy",
+          "name": "ahsanjamee/opencode-go-claude-proxy",
+          "provider": "github",
+          "score": 68,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/RESMP-DEV/ccr-rust",
+          "name": "RESMP-DEV/ccr-rust",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "HIGH",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/HosheaLi/dsv4-cc-proxy",
+          "name": "HosheaLi/dsv4-cc-proxy",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/sunflower0305/claude-proxy",
+          "name": "sunflower0305/claude-proxy",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/betri28/opencode-proxy",
+          "name": "betri28/opencode-proxy",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "esm-commonjs-vite",
+      "requiredProviders": [
+        "npm"
+      ],
+      "relevance": {
+        "passed": false
+      },
+      "safety": {
+        "passed": true
+      },
+      "providerCoverage": {
+        "configured": 2,
+        "completedWithResults": 2
+      },
+      "outcome": "passed",
+      "elapsedMs": 7675,
+      "providers": [
+        {
+          "provider": "github",
+          "state": "complete",
+          "resultCount": 35
+        },
+        {
+          "provider": "npm",
+          "state": "complete",
+          "resultCount": 20
+        }
+      ],
+      "candidates": [
+        {
+          "url": "https://github.com/pomerium/chatgpt-app-typescript-template",
+          "name": "pomerium/chatgpt-app-typescript-template",
+          "provider": "github",
+          "score": 73,
+          "trustLevel": "HIGH",
+          "penaltyCount": 0,
+          "warningCategories": []
+        },
+        {
+          "url": "https://github.com/Ravikiran-17/Outskill-AI",
+          "name": "Ravikiran-17/Outskill-AI",
+          "provider": "github",
+          "score": 68,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/ManasGulati/fullstack-inProgress--note-summarizer",
+          "name": "ManasGulati/fullstack-inProgress--note-summarizer",
+          "provider": "github",
+          "score": 68,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/yjh-god/knowledge-base-system",
+          "name": "yjh-god/knowledge-base-system",
+          "provider": "github",
+          "score": 68,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/vineetdhar/ai-linkedin-blog-agent",
+          "name": "vineetdhar/ai-linkedin-blog-agent",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/logzio/js-metrics",
+          "name": "logzio/js-metrics",
+          "provider": "github",
+          "score": 65,
+          "trustLevel": "HIGH",
+          "penaltyCount": 0,
+          "warningCategories": []
+        },
+        {
+          "url": "https://github.com/Kundananjik/weatherapp",
+          "name": "Kundananjik/weatherapp",
+          "provider": "github",
+          "score": 60,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "LOW_STARS"
+          ]
+        },
+        {
+          "url": "https://github.com/NikVince/ai-chat-interface",
+          "name": "NikVince/ai-chat-interface",
+          "provider": "github",
+          "score": 60,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "LOW_STARS"
+          ]
+        },
+        {
+          "url": "https://github.com/Shyed/ai-chat-app",
+          "name": "Shyed/ai-chat-app",
+          "provider": "github",
+          "score": 58,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "https://github.com/rangta10/kali-mcp-server",
+          "name": "rangta10/kali-mcp-server",
+          "provider": "github",
+          "score": 57,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "LOW_STARS"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "textlint-module-interop",
+      "requiredProviders": [
+        "npm"
+      ],
+      "relevance": {
+        "passed": true
+      },
+      "safety": {
+        "passed": true
+      },
+      "providerCoverage": {
+        "configured": 1,
+        "completedWithResults": 1
+      },
+      "outcome": "passed",
+      "elapsedMs": 3660,
+      "providers": [
+        {
+          "provider": "npm",
+          "state": "complete",
+          "resultCount": 20
+        }
+      ],
+      "candidates": [
+        {
+          "url": "git+https://github.com/chimurai/http-proxy-middleware.git",
+          "name": "http-proxy-middleware",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/expressjs/compression.git",
+          "name": "compression",
+          "provider": "npm",
+          "score": 27,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/bufbuild/protobuf-es.git",
+          "name": "@bufbuild/protobuf",
+          "provider": "npm",
+          "score": 20,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/textlint/textlint.git",
+          "name": "@textlint/module-interop",
+          "provider": "npm",
+          "score": 20,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/firebase/firebase-js-sdk.git",
+          "name": "@firebase/auth-interop-types",
+          "provider": "npm",
+          "score": 20,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/koajs/koa.git",
+          "name": "koa",
+          "provider": "npm",
+          "score": 15,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/zloirock/core-js.git",
+          "name": "core-js",
+          "provider": "npm",
+          "score": 12,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/mathiasbynens/unicode-property-aliases-ecmascript.git",
+          "name": "unicode-property-aliases-ecmascript",
+          "provider": "npm",
+          "score": 7,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/mathiasbynens/unicode-match-property-value-ecmascript.git",
+          "name": "unicode-match-property-value-ecmascript",
+          "provider": "npm",
+          "score": 7,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/webpack/webpack-dev-middleware.git",
+          "name": "webpack-dev-middleware",
+          "provider": "npm",
+          "score": 7,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "vite-plugin-resolution",
+      "requiredProviders": [
+        "github",
+        "npm"
+      ],
+      "relevance": {
+        "passed": true
+      },
+      "safety": {
+        "passed": true
+      },
+      "providerCoverage": {
+        "configured": 2,
+        "completedWithResults": 2
+      },
+      "outcome": "passed",
+      "elapsedMs": 4163,
+      "providers": [
+        {
+          "provider": "github",
+          "state": "complete",
+          "resultCount": 3
+        },
+        {
+          "provider": "npm",
+          "state": "complete",
+          "resultCount": 20
+        }
+      ],
+      "candidates": [
+        {
+          "url": "https://github.com/adesege/vite-plugin-laravel-i18next",
+          "name": "adesege/vite-plugin-laravel-i18next",
+          "provider": "github",
+          "score": 56,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "LOW_STARS"
+          ]
+        },
+        {
+          "url": "https://github.com/mouadboudhar/Cerberus-Proxy",
+          "name": "mouadboudhar/Cerberus-Proxy",
+          "provider": "github",
+          "score": 55,
+          "trustLevel": "MEDIUM",
+          "penaltyCount": 0,
+          "warningCategories": [
+            "NEW_PROJECT"
+          ]
+        },
+        {
+          "url": "git+https://github.com/module-federation/vite.git",
+          "name": "@module-federation/vite",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "https://github.com/storybookjs/storybook.git",
+          "name": "@storybook/builder-vite",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/cloudflare/workers-sdk.git",
+          "name": "@cloudflare/vite-plugin",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/vitejs/vite.git",
+          "name": "vite",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "https://www.npmjs.com/package/lovable-tagger",
+          "name": "lovable-tagger",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/laravel/vite-plugin.git",
+          "name": "laravel-vite-plugin",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "git+https://github.com/marco-prontera/vite-plugin-css-injected-by-js.git",
+          "name": "vite-plugin-css-injected-by-js",
+          "provider": "npm",
+          "score": 40,
+          "trustLevel": "LOW",
+          "penaltyCount": 2,
+          "warningCategories": [
+            "PENALTY",
+            "PENALTY"
+          ]
+        },
+        {
+          "url": "https://github.com/Koxone/Sacbe-Coupon-Generator-React-Tailwind",
+          "name": "Koxone/Sacbe-Coupon-Generator-React-Tailwind",
+          "provider": "github",
+          "score": 33,
+          "trustLevel": "LOW",
+          "penaltyCount": 1,
+          "warningCategories": [
+            "PENALTY",
+            "LOW_STARS"
+          ]
+        }
+      ]
+    }
+  ]
+}

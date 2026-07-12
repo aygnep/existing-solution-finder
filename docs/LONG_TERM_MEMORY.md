@@ -36,7 +36,11 @@ value is evidence, fit, and risk visibility, not generic chat.
 
 ## Known Constraints
 
-- No real-query quality benchmark yet.
+- A versioned real-query benchmark and initial reviewed baseline exist under
+  `benchmarks/`; ordinary tests remain offline and baseline replacement is
+  explicit.
 - Web evidence is provider metadata/snippets, not full-page extraction.
+- Web search implementation currently supports Brave only, even though
+  environment parsing still accepts `serpapi`.
 - ESLint configuration is missing.
 - No persistence, private sources, accounts, or team workflow.

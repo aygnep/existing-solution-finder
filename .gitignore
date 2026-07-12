@@ -9,3 +9,4 @@ coverage/
 .worktrees/
 test-results/
 playwright-report/
+benchmark-reports/
