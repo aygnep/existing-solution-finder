@@ -23,14 +23,29 @@ Updated: 2026-07-13
   validates in environment parsing but is returned as an empty provider by
   `web-search.ts`.
 
+## Competitive Findings
+
+GitHub topic research on 2026-07-13 highlighted mature code-context and
+analysis tools such as `zilliztech/claude-context` (12k+ stars),
+`sourcegraph/sourcegraph-public-snapshot` (10k+), `MinishLab/semble`
+(5k+), `astral-sh/ruff` (48k+), and `semgrep/semgrep` (15k+). Their
+common strengths are repository-aware context, high-signal evidence, and
+integration into developer workflows rather than a one-off result list.
+
 ## Next Work
 
 1. Tune queries and scoring against the two benchmark relevance misses, then
    review whether to update the baseline.
-2. Reconcile the documented/configured web provider list with implementation,
+2. Add benchmark acceptance targets for critical cases; a baseline that records
+   a relevance miss must remain visible as an improvement target, not become a
+   silent pass condition.
+3. Reconcile the documented/configured web provider list with implementation,
    or add SerpAPI support.
-3. Add bounded web evidence extraction and official-source signals.
-4. Add an ESLint configuration; current lint fails before linting.
+4. Add bounded page extraction, official-domain signals, and source-quality
+   ranking before expanding URL grouping.
+5. Add a session-level “useful / not useful / unsafe” candidate feedback action
+   so benchmark updates can be grounded in reviewed outcomes.
+6. Add an ESLint configuration; current lint fails before linting.
 
 ## Verification
 
