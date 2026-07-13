@@ -232,7 +232,7 @@ function buildWarnings(
 
   // Warnings from penalties
   for (const penalty of penalties) {
-    warnings.push({ category: 'PENALTY', message: penalty.reason });
+    warnings.push({ category: 'PENALTY', code: 'penalty', message: penalty.reason });
   }
 
   // Additional safety warnings (not penalties, just informational)
@@ -244,12 +244,16 @@ function buildWarnings(
   if (ageMonths !== null && ageMonths < 6 && stars < 100) {
     warnings.push({
       category: 'NEW_PROJECT',
+      code: 'new-project',
       message: `Created ${Math.round(ageMonths)} months ago with only ${stars} stars. Not widely tested.`,
+      params: { createdMonths: Math.round(ageMonths), stars },
     });
   } else if (stars < 50 && metadata.ownerType === 'user') {
     warnings.push({
       category: 'LOW_STARS',
+      code: 'low-stars',
       message: `Only ${stars} stars. May be experimental or unmaintained.`,
+      params: { stars },
     });
   }
 

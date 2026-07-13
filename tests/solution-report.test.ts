@@ -38,4 +38,13 @@ describe('solution exporters', () => {
     expect(skill).toContain('Never install or execute a candidate automatically.');
     expect(skill).toContain(solution.evidence[0]!.sourceUrl);
   });
+
+  it('renders Chinese system-generated content while preserving source evidence', () => {
+    const markdown = renderSolutionReport({ request, candidates: [solution], language: 'zh' });
+
+    expect(markdown).toContain('# Fixseek 解决方案报告');
+    expect(markdown).toContain('风险提示');
+    expect(markdown).toContain('验证步骤');
+    expect(markdown).toContain('Evidence');
+  });
 });

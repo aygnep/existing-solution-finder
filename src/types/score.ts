@@ -23,7 +23,9 @@ export type TrustLevel = 'HIGH' | 'MEDIUM' | 'LOW' | 'BLOCKED';
 /** Safety warning to surface in output */
 export interface SafetyWarning {
   readonly category: string;
+  readonly code?: 'penalty' | 'new-project' | 'low-stars';
   readonly message: string;
+  readonly params?: Readonly<Record<string, string | number>>;
 }
 
 /** Full score for a candidate */

@@ -1,4 +1,6 @@
 import { scoreCandidate, scoreAndAttach } from '../src/core/scorer';
+import { formatMatchReason, formatSafetyWarning } from '../src/core/candidate-presentation';
+import { rankCandidates } from '../src/core/ranker';
 
 import type { ParsedProblem } from '../src/types/problem';
 import type { RawCandidate } from '../src/types/candidate';
@@ -392,6 +394,10 @@ describe('scoreCandidate', () => {
       const score = scoreCandidate(candidate, makeProblem());
       const newProjectWarning = score.warnings.find((w) => w.category === 'NEW_PROJECT');
       expect(newProjectWarning).toBeDefined();
+      expect(newProjectWarning).toMatchObject({
+        code: 'new-project',
+        params: { stars: 12 },
+      });
     });
 
     it('warns about low stars for individual projects', () => {
@@ -406,6 +412,35 @@ describe('scoreCandidate', () => {
       const score = scoreCandidate(candidate, makeProblem());
       const lowStarsWarning = score.warnings.find((w) => w.category === 'LOW_STARS');
       expect(lowStarsWarning).toBeDefined();
+      expect(lowStarsWarning).toMatchObject({
+        code: 'low-stars',
+        params: { stars: 10 },
+      });
+    });
+  });
+
+  describe('localized presentation', () => {
+    it('renders a match reason from stable score data in both languages', () => {
+      const ranked = rankCandidates([scoreAndAttach(makeCandidate({
+        name: 'reasoning_content-proxy',
+        description: 'Supports Claude Code and DeepSeek reasoning_content',
+      }), makeProblem(), FIXED_NOW)]);
+
+      expect(formatMatchReason(ranked[0]!, 'en')).toContain('Directly references the error');
+      expect(formatMatchReason(ranked[0]!, 'zh')).toContain('直接提及该错误');
+    });
+
+    it('renders a warning from its stable code in Chinese', () => {
+      const warning = scoreCandidate(makeCandidate({
+        metadata: {
+          ...makeCandidate().metadata,
+          stars: 10,
+          ownerType: 'user',
+          createdDate: new Date('2024-01-01'),
+        },
+      }), makeProblem(), FIXED_NOW).warnings.find((item) => item.category === 'LOW_STARS');
+
+      expect(formatSafetyWarning(warning!, 'zh')).toContain('星标');
     });
   });
 

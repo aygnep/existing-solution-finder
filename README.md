@@ -155,9 +155,11 @@ npm run web:dev
 ```
 
 Open <http://127.0.0.1:5173>. The local gateway listens on port 4174 and keeps
-provider credentials outside the browser. Web sessions are not persisted. Mock
-mode is deterministic and needs no credentials; real mode uses the environment
-variables listed above.
+provider credentials outside the browser. Web sessions are not persisted. The
+workbench defaults to real mode and keeps each provider's complete, empty,
+skipped, or failed state visible. The Chinese / EN selector immediately changes
+system-generated candidate explanations, warnings, validation steps, and
+exports; evidence stays in its original source language.
 
 The GitHub repository is currently:
 [aygnep/existing-solution-finder](https://github.com/aygnep/existing-solution-finder).

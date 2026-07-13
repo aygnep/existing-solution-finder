@@ -1,32 +1,39 @@
 import type { DiscoveryRequest, SolutionCandidate } from '../types/discovery.js';
+import { formatMatchReason, formatSafetyWarning, formatValidationStep } from '../core/candidate-presentation.js';
+import type { Language } from '../i18n/types.js';
 
 export interface SolutionExportInput {
   readonly request: DiscoveryRequest;
   readonly candidates: readonly SolutionCandidate[];
+  readonly language?: Language;
 }
 
 export function renderSolutionReport(input: SolutionExportInput): string {
+  const language = input.language ?? 'en';
+  const labels = language === 'zh'
+    ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '评分', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤' }
+    : { title: '# Fixseek Solution Report', problem: 'Problem', sources: 'Sources', score: 'Score', why: 'Why', evidence: 'Evidence', warnings: 'Safety warnings', validation: 'Validation' };
   const lines = [
-    '# Fixseek Solution Report',
+    labels.title,
     '',
-    `## Problem\n${input.request.problem}`,
+    `## ${labels.problem}\n${input.request.problem}`,
     '',
-    `## Sources\n${input.request.providers.join(', ') || 'None'}`,
+    `## ${labels.sources}\n${input.request.providers.join(', ') || 'None'}`,
   ];
 
   for (const candidate of input.candidates) {
     lines.push(
       '',
       `## ${candidate.name}`,
-      `- Score: ${candidate.score.displayTotal}/100 (${candidate.score.trustLevel})`,
-      `- Why: ${candidate.matchReason}`,
-      '- Evidence:',
+      `- ${labels.score}: ${candidate.score.displayTotal}/100 (${candidate.score.trustLevel})`,
+      `- ${labels.why}: ${formatMatchReason(candidate, language)}`,
+      `- ${labels.evidence}:`,
       ...candidate.evidence.map((evidence) => `  - ${evidence.sourceUrl}${evidence.excerpt ? ` — ${evidence.excerpt}` : ''}`),
     );
     if (candidate.score.warnings.length > 0) {
-      lines.push('- Safety warnings:', ...candidate.score.warnings.map((warning) => `  - ${warning.category}: ${warning.message}`));
+      lines.push(`- ${labels.warnings}:`, ...candidate.score.warnings.map((warning) => `  - ${warning.category}: ${formatSafetyWarning(warning, language)}`));
     }
-    lines.push('- Validation:', ...candidate.validationSteps.map((step) => `  - ${step.instruction}`));
+    lines.push(`- ${labels.validation}:`, ...candidate.validationSteps.map((step) => `  - ${formatValidationStep(step, language).instruction}`));
   }
 
   return lines.join('\n') + '\n';
