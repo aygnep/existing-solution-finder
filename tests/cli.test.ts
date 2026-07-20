@@ -171,4 +171,27 @@ describe('Fixseek CLI UX', () => {
     expect(stdout.text()).toContain('Read the issue thread');
     expect(stderr.text()).toBe('');
   });
+
+  it('reports providers skipped for missing credentials', async () => {
+    delete process.env.GITHUB_TOKEN;
+    delete process.env.WEB_SEARCH_API_KEY;
+    global.fetch = jest.fn(async () => new Response(JSON.stringify({ objects: [] }), { status: 200 })) as unknown as typeof fetch;
+
+    const { io, stdout, stderr } = makeIo();
+    const code = await runSolve(
+      ['vite module not found'],
+      {
+        real: true,
+        maxResults: '1',
+        logLevel: 'warn',
+        lang: 'en',
+      },
+      io,
+    );
+
+    expect(code).toBe(0);
+    expect(stdout.text()).toContain('No results found');
+    expect(stderr.text()).toContain('Provider skipped: github. GitHub token is not configured.');
+    expect(stderr.text()).toContain('Provider skipped: web. Web search key is not configured.');
+  });
 });

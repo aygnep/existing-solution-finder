@@ -126,8 +126,22 @@ export async function runSolve(
     searchers,
   });
 
+  writeProviderWarnings(result.providerStatus, lang, io);
   io.stdout.write(summarize(result.candidates, result.parsedProblem, { lang }));
   return 0;
+}
+
+function writeProviderWarnings(
+  statuses: readonly { provider: Provider; state: string; message?: string }[],
+  lang: Language,
+  io: CliIo,
+): void {
+  for (const status of statuses) {
+    if (status.state !== 'skipped' && status.state !== 'failed') continue;
+    const label = status.state === 'skipped' ? t(lang, 'providerSkipped') : t(lang, 'providerFailed');
+    const detail = status.message ? ` ${status.message}` : '';
+    io.stderr.write(`${label}: ${status.provider}.${detail}\n`);
+  }
 }
 
 function addSolveOptions(command: Command): void {

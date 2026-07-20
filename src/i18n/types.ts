@@ -19,6 +19,8 @@ export type MessageKey =
   | 'penalties'
   | 'problem'
   | 'provider'
+  | 'providerFailed'
+  | 'providerSkipped'
   | 'readme'
   | 'readingFromStdin'
   | 'realMode'

@@ -14,10 +14,18 @@ interface BraveSearchResponse {
   };
 }
 
+interface SerpApiResponse {
+  organic_results?: Array<{
+    title?: string;
+    link?: string;
+    snippet?: string;
+  }>;
+}
+
 /**
  * Searches the web for candidates using the configured provider.
  *
- * Currently supports: Brave Search API.
+ * Currently supports: Brave Search API and SerpApi.
  * Returns empty array if WEB_SEARCH_API_KEY is not configured.
  */
 export async function searchWeb(
@@ -35,8 +43,64 @@ export async function searchWeb(
     return searchBrave(query, env);
   }
 
+  if (provider === 'serpapi') {
+    return searchSerpApi(query, env);
+  }
+
   logger.warn('Unsupported web search provider', { provider });
   return [];
+}
+
+// ─── SerpApi ──────────────────────────────────────────────────────────────────
+
+async function searchSerpApi(query: Query, env: Env): Promise<readonly RawCandidate[]> {
+  const url = new URL('https://serpapi.com/search.json');
+  url.searchParams.set('engine', 'google');
+  url.searchParams.set('q', query.text);
+  url.searchParams.set('num', String(Math.min(env.MAX_RESULTS_PER_PROVIDER, 20)));
+  url.searchParams.set('api_key', env.WEB_SEARCH_API_KEY ?? '');
+
+  logger.debug('SerpApi web search', { query: query.text });
+
+  let response: Response;
+  try {
+    response = await fetch(url.toString(), {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(env.REQUEST_TIMEOUT_MS),
+    });
+  } catch (err) {
+    logger.warn('SerpApi search request failed', { error: String(err) });
+    return [];
+  }
+
+  if (!response.ok) {
+    logger.warn('SerpApi search returned non-OK status', {
+      status: response.status,
+      query: query.text,
+    });
+    return [];
+  }
+
+  let data: SerpApiResponse;
+  try {
+    data = (await response.json()) as SerpApiResponse;
+  } catch {
+    logger.warn('SerpApi search response parse failed');
+    return [];
+  }
+
+  return (data.organic_results ?? [])
+    .filter((result): result is { title: string; link: string; snippet?: string } =>
+      Boolean(result.title && result.link),
+    )
+    .map((result) => ({
+      id: result.link,
+      name: result.title,
+      url: result.link,
+      description: result.snippet ?? '',
+      provider: 'web' as const,
+      metadata: {},
+    }));
 }
 
 // ─── Brave Search ─────────────────────────────────────────────────────────────

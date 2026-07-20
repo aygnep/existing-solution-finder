@@ -46,8 +46,17 @@ fixseek "问题描述"
 # 从 stdin 读取错误日志
 cat error.log | fixseek --stdin
 
-# 使用真实搜索（需要 GITHUB_TOKEN）
+# 使用真实搜索（按 provider 配置凭据）
 fixseek --real "vite module not found"
+
+# 真实 npm 搜索（不需要 token，但需要网络）
+fixseek --real --provider npm "ESM CommonJS package error"
+
+# 真实 GitHub 搜索（需要 GITHUB_TOKEN）
+fixseek --real --provider github "vite module not found"
+
+# 真实 Web 搜索（需要 WEB_SEARCH_API_KEY）
+fixseek --real --provider web "vite module not found"
 
 # 中文输出
 fixseek --lang zh "reasoning_content 报错"
@@ -87,8 +96,8 @@ fixseek --real --provider github "vite module not found"
 
 当前支持的环境变量：
 
-- `GITHUB_TOKEN`: real GitHub 模式需要；mock 模式不需要。
-- `WEB_SEARCH_PROVIDER`: 可选 web 搜索 provider，目前支持 `brave` 或 `serpapi`。
+- `GITHUB_TOKEN`: real GitHub 搜索需要；mock 模式不需要。
+- `WEB_SEARCH_PROVIDER`: 可选 web 搜索 provider，支持 `brave` 或 `serpapi`，默认 `brave`。
 - `WEB_SEARCH_API_KEY`: web 搜索 provider 的 API key。
 - `LOG_LEVEL`: `debug`、`info`、`warn`、`error`，默认 `warn`。
 - `MAX_RESULTS_PER_PROVIDER`: 每个 provider 的最大返回数量，默认 `10`。
@@ -137,7 +146,7 @@ AI 很适合解释和推理，但它不一定知道最新的 issue、仓库或 n
 
 ### GitHub token 是否必须？
 
-默认 mock 模式不需要。只有使用 `--real --provider github` 或需要 GitHub real provider 时，才需要 `GITHUB_TOKEN`。
+默认 mock 模式不需要。GitHub real provider 需要 `GITHUB_TOKEN`，Web real provider 需要 `WEB_SEARCH_API_KEY`，npm provider 不需要 token。
 
 ### npm 安装后命令找不到怎么办？
 

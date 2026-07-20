@@ -43,8 +43,17 @@ fixseek "reasoning_content error with Claude Code + DeepSeek"
 # Read a log from stdin
 cat error.log | fixseek --stdin
 
-# Real search (requires GITHUB_TOKEN)
+# Real search across configured providers
 fixseek --real "vite module not found"
+
+# Real npm search (no token required; network access is required)
+fixseek --real --provider npm "ESM CommonJS package error"
+
+# Real GitHub search (requires GITHUB_TOKEN)
+fixseek --real --provider github "vite module not found"
+
+# Real web search (requires WEB_SEARCH_API_KEY)
+fixseek --real --provider web "vite module not found"
 
 # Chinese output
 fixseek --lang zh "reasoning_content 报错"
@@ -53,8 +62,10 @@ fixseek --lang zh "reasoning_content 报错"
 fixseek --max-results 5 "npm package ESM CommonJS error"
 ```
 
-Supported providers are `github`, `web`, and `npm`. Real GitHub mode requires
-`GITHUB_TOKEN`; mock mode does not.
+Supported providers are `github`, `web`, and `npm`. Real GitHub searches require
+`GITHUB_TOKEN`, real web searches require `WEB_SEARCH_API_KEY`, and npm searches
+do not require a token. The default real mode attempts every provider whose
+credentials are available and reports skipped providers on stderr.
 
 ### Advanced Options
 
@@ -94,7 +105,7 @@ Copy `.env.example` to `.env` when you want real providers.
 | Variable | Purpose |
 | --- | --- |
 | `GITHUB_TOKEN` | GitHub token for `--real --provider github`. Not needed in mock mode. |
-| `WEB_SEARCH_PROVIDER` | Optional web search provider: `brave` or `serpapi`. |
+| `WEB_SEARCH_PROVIDER` | Optional web search provider: `brave` or `serpapi`; defaults to `brave`. |
 | `WEB_SEARCH_API_KEY` | API key for the configured web search provider. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, or `error`. Default: `warn`. |
 | `MAX_RESULTS_PER_PROVIDER` | Max results requested per provider. Default: `10`. |
