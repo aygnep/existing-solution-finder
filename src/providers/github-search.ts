@@ -1,13 +1,22 @@
 import type { Env } from '../utils/env.js';
 import type { Query, RawCandidate } from '../types/candidate.js';
 import { logger } from '../utils/logger.js';
-import { fetchGitHubJson } from './github-api.js';
+import { fetchGitHubJson, gitHubFailureAsError } from './github-api.js';
+import {
+  ProviderError,
+  fetchProviderText,
+  invalidateProviderCache,
+  mapWithConcurrency,
+  providerCacheKey,
+} from './provider-runtime.js';
 
 /** Maximum length for a GitHub search query to avoid API errors */
 const MAX_QUERY_LENGTH = 256;
 
 /** Maximum README bytes to fetch */
 const MAX_README_BYTES = 8192;
+const QUERY_CONCURRENCY = 3;
+const README_CONCURRENCY = 3;
 
 interface GitHubRepo {
   full_name: string;
@@ -69,20 +78,37 @@ export async function searchGitHub(
 
   const url = buildUrl(sanitizedQuery, env.MAX_RESULTS_PER_PROVIDER);
 
-  logger.debug('GitHub search', { url: url.toString().replace(env.GITHUB_TOKEN, '[REDACTED]') });
+  logger.debug('GitHub repository search started');
 
+  const cacheKey = providerCacheKey(
+    'github',
+    'GitHub repository search',
+    sanitizedQuery,
+    env.MAX_RESULTS_PER_PROVIDER,
+  );
   const result = await fetchGitHubJson<GitHubSearchResponse>(
     url,
     env,
     { requestName: 'GitHub repository search', query: sanitizedQuery },
   );
 
-  if (!result.ok) return [];
+  if (!result.ok) throw gitHubFailureAsError(result.failure);
 
   const data = result.data;
+  if (!Array.isArray(data.items)) {
+    invalidateProviderCache(cacheKey);
+    throw new ProviderError({
+      provider: 'github',
+      operation: 'GitHub repository search',
+      kind: 'invalid-json',
+      retryable: false,
+    });
+  }
 
-  const candidates = await Promise.all(
-    data.items.map((repo) => mapRepoWithReadme(repo, env)),
+  const candidates = await mapWithConcurrency(
+    data.items,
+    README_CONCURRENCY,
+    (repo) => mapRepoWithReadme(repo, env),
   );
 
   return candidates;
@@ -104,13 +130,28 @@ export async function searchGitHubIssues(
   }
 
   const url = buildIssueSearchUrl(sanitizedQuery, env.MAX_RESULTS_PER_PROVIDER);
+  const cacheKey = providerCacheKey(
+    'github',
+    'GitHub issue search',
+    sanitizedQuery,
+    env.MAX_RESULTS_PER_PROVIDER,
+  );
   const result = await fetchGitHubJson<GitHubIssueSearchResponse>(
     url,
     env,
     { requestName: 'GitHub issue search', query: sanitizedQuery },
   );
 
-  if (!result.ok) return [];
+  if (!result.ok) throw gitHubFailureAsError(result.failure);
+  if (!Array.isArray(result.data.items)) {
+    invalidateProviderCache(cacheKey);
+    throw new ProviderError({
+      provider: 'github',
+      operation: 'GitHub issue search',
+      kind: 'invalid-json',
+      retryable: false,
+    });
+  }
 
   return result.data.items.map(mapIssue);
 }
@@ -126,12 +167,19 @@ export async function searchGitHubMultiQuery(
   const repoQueries = queries.filter((q) => q.category !== 'github-issues');
   const issueQueries = queries.filter((q) => q.category === 'github-issues');
 
-  const [repoResults, issueResults] = await Promise.all([
-    Promise.all(repoQueries.map((q) => searchGitHub(q, env))),
-    Promise.all(issueQueries.map((q) => searchGitHubIssues(q, env))),
-  ]);
+  const routedQueries = [
+    ...repoQueries.map((query) => ({ query, kind: 'repo' as const })),
+    ...issueQueries.map((query) => ({ query, kind: 'issue' as const })),
+  ];
+  const results = await mapWithConcurrency(
+    routedQueries,
+    QUERY_CONCURRENCY,
+    ({ query, kind }) => kind === 'repo'
+      ? searchGitHub(query, env)
+      : searchGitHubIssues(query, env),
+  );
 
-  return deduplicateById([...repoResults.flat(), ...issueResults.flat()]);
+  return deduplicateById(results.flat());
 }
 
 // ─── Query sanitization ───────────────────────────────────────────────────────
@@ -334,17 +382,19 @@ async function fetchReadme(
     const readmeUrl = `https://raw.githubusercontent.com/${fullName}/${branch}/README.md`;
 
     try {
-      const response = await fetch(readmeUrl, {
-        signal: AbortSignal.timeout(5000),
+      const text = await fetchProviderText({
+        provider: 'github',
+        operation: 'GitHub README fetch',
+        url: readmeUrl,
+        timeoutMs: Math.min(env.REQUEST_TIMEOUT_MS, 5000),
+        cacheKey: providerCacheKey('github', 'readme', `${fullName}:${branch}`, 1),
       });
 
-      if (!response.ok) continue;
-
-      const text = await response.text();
       if (text.trim()) {
         return text.slice(0, MAX_README_BYTES);
       }
-    } catch {
+    } catch (error) {
+      if (error instanceof ProviderError && error.kind === 'auth') throw error;
       // Try next branch
     }
   }

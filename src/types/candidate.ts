@@ -17,6 +17,22 @@ export interface Query {
 export type Provider = 'github' | 'web' | 'npm';
 
 /**
+ * Provider-native provenance retained for agent-facing JSON output.
+ * Fields are optional because each provider exposes different evidence.
+ */
+export interface ProviderEvidence {
+  readonly sourceUrl?: string;
+  readonly title?: string;
+  readonly snippet?: string;
+  readonly publishedDate?: string;
+  readonly sourceName?: string;
+  readonly registryUrl?: string;
+  readonly latestVersion?: string;
+  readonly updatedAt?: string;
+  readonly metadataStatus?: 'complete' | 'degraded';
+}
+
+/**
  * A raw result from a provider before scoring.
  * Providers return this; scorer consumes it.
  */
@@ -28,6 +44,8 @@ export interface RawCandidate {
   readonly readmeSnippet?: string;
   readonly provider: Provider;
   readonly metadata: CandidateMetadata;
+  /** Provider-native provenance for structured output and evidence review. */
+  readonly providerEvidence?: ProviderEvidence;
   /** Optional type hint from the provider (tool / issue / workaround) */
   readonly candidateTypeHint?: 'tool' | 'issue' | 'workaround';
   /** Optional next-step suggestion from the provider */

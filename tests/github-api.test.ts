@@ -4,6 +4,10 @@ import {
   type GitHubApiFailureKind,
 } from '../src/providers/github-api';
 import type { Env } from '../src/utils/env';
+import {
+  resetProviderRuntimeForTests,
+  setProviderRuntimeHooksForTests,
+} from '../src/providers/provider-runtime';
 
 const originalFetch = global.fetch;
 
@@ -28,6 +32,11 @@ function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
 afterEach(() => {
   global.fetch = originalFetch;
   jest.restoreAllMocks();
+  resetProviderRuntimeForTests();
+});
+
+beforeEach(() => {
+  setProviderRuntimeHooksForTests({ sleep: async () => undefined });
 });
 
 describe('classifyGitHubStatus', () => {
@@ -35,9 +44,9 @@ describe('classifyGitHubStatus', () => {
     [401, 'auth'],
     [403, 'rate-limit'],
     [404, 'not-found'],
-    [422, 'other'],
+    [422, 'http'],
     [429, 'rate-limit'],
-    [500, 'other'],
+    [500, 'http'],
   ])('classifies %i as %s', (status, expected) => {
     expect(classifyGitHubStatus(status)).toBe(expected);
   });
@@ -82,7 +91,9 @@ describe('fetchGitHubJson', () => {
       failure: {
         kind: 'auth',
         status: 401,
-        message: 'repo search returned HTTP 401 for query "test"',
+        message: '[github] provider request failed (kind=auth, status=401, retryable=false)',
+        provider: 'github',
+        retryable: false,
       },
     });
   });
@@ -121,7 +132,9 @@ describe('fetchGitHubJson', () => {
       failure: {
         kind: 'not-found',
         status: 404,
-        message: 'repo fetch returned HTTP 404 for query "owner/repo"',
+        message: '[github] provider request failed (kind=not-found, status=404, retryable=false)',
+        provider: 'github',
+        retryable: false,
       },
     });
   });
@@ -143,7 +156,9 @@ describe('fetchGitHubJson', () => {
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.failure.kind).toBe('invalid-json');
-      expect(result.failure.message).toBe('repo search returned invalid JSON for query "test"');
+      expect(result.failure.message).toBe(
+        '[github] provider request failed (kind=invalid-json, status=200, retryable=false)',
+      );
     }
   });
 
@@ -160,8 +175,31 @@ describe('fetchGitHubJson', () => {
 
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.failure.kind).toBe('network');
-      expect(result.failure.message).toBe('repo search request failed for query "test": Error: socket closed');
+      expect(result.failure.kind).toBe('transport');
+      expect(result.failure.retryable).toBe(true);
+      expect(result.failure.message).toBe(
+        '[github] provider request failed (kind=transport, retryable=true)',
+      );
+      expect(result.failure.message).not.toContain('socket closed');
+    }
+  });
+
+  it('never includes the token in a failure message', async () => {
+    const token = 'ghp_super_secret_value';
+    global.fetch = jest.fn(async () => {
+      throw new Error(`failed request with ${token}`);
+    }) as unknown as typeof fetch;
+
+    const result = await fetchGitHubJson<{ ok: boolean }>(
+      new URL(`https://api.github.com/search/repositories?q=${token}`),
+      makeEnv({ GITHUB_TOKEN: token }),
+      { requestName: 'repo search', query: token },
+    );
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.failure.message).not.toContain(token);
+      expect(result.failure.provider).toBe('github');
     }
   });
 });

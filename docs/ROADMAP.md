@@ -10,7 +10,16 @@ The repository now has a versioned real-provider benchmark, a reviewed initial
 baseline, and an explicit command for comparing later runs without exposing
 credentials.
 
-## Next Priorities
+The P2 agent-first workflow is implemented:
+
+- CLI real search is the default; mock is test/demo only.
+- `--json`, structured context, stack, and constraints support coding agents.
+- Provider failures, empty results, retries, cache, and concurrency are explicit.
+- npm and web preserve bounded provider-native evidence.
+- Results include source evidence and a validation/rollback/re-search loop.
+- Local `useful`, `not-useful`, and `unsafe` outcome records are available.
+
+## P3 Priorities
 
 ### 1. Improve measured real quality
 
@@ -25,18 +34,21 @@ credentials.
 - Extract bounded page content and highlights for web results.
 - Identify official documentation and improve provenance confidence.
 - Expand grouping beyond exact canonical URLs only after evaluation proves value.
+- Use reviewed outcome records as an explicit, auditable ranking input; never
+  learn silently from unreviewed activity.
 
 ### 3. Polish the Web Guide
 
 - Add stack and constraint editors.
 - Show generated queries and provider skip/failure messages clearly.
+- Add the outcome feedback action to the Web UI.
 - Add an ESLint configuration before treating lint as a release gate.
 
 ### 4. Release confidence
 
 - Exercise real mode with configured GitHub and web credentials.
-- Align the documented web-provider choices with the providers actually
-  implemented before treating web coverage as a release signal.
+- Keep smoke coverage for GitHub, npm, Brave/SerpApi web, JSON output, and the
+  globally linked command.
 - Keep npm publishing manual.
 - Maintain unit, Web UI, and Playwright coverage.
 

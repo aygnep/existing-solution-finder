@@ -3,7 +3,7 @@ import { parseProblem } from './problem-parser.js';
 import { rankCandidates } from './ranker.js';
 import { scoreAndAttach } from './scorer.js';
 import { groupSolutions } from './solution-grouper.js';
-import { createValidationSteps } from './validation-guidance.js';
+import { redactSensitiveText } from '../feedback/redaction.js';
 import {
   buildDiscoveryRequest,
   type DiscoveryRequest,
@@ -61,10 +61,7 @@ export async function discoverSolutions(
       providers: query.providers,
     })),
     providerStatus: runs.map(({ raw: _raw, ...status }) => status),
-    candidates: groupSolutions(ranked, options.now).map((candidate) => ({
-      ...candidate,
-      validationSteps: createValidationSteps(candidate),
-    })),
+    candidates: groupSolutions(ranked, options.now),
     completedAt: options.now.toISOString(),
   };
 }
@@ -106,7 +103,5 @@ function buildProblemText(request: DiscoveryRequest): string {
 }
 
 function safeMessage(error: unknown): string {
-  return String(error)
-    .replace(/ghp_[A-Za-z0-9_]+/g, '[REDACTED]')
-    .replace(/sk-[A-Za-z0-9_-]+/g, '[REDACTED]');
+  return redactSensitiveText(String(error));
 }

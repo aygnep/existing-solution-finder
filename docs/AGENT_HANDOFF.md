@@ -1,12 +1,20 @@
 # Agent Handoff — Short-Term Memory
 
-Updated: 2026-07-13
+Updated: 2026-07-23
 
 ## Current State
 
-- Local main was pushed through commit 9b1382f.
+- Agent-first P2 is complete and independently reviewed for release.
 - CLI and Web share discoverSolutions; do not recreate UI-only search behavior.
-- Web mock mode is deterministic. Real mode uses discovery-searchers.ts.
+- CLI defaults to real providers. `--mock` is explicit test/demo behavior.
+- `fixseek --json` exposes invocation metadata, search plan, provider states,
+  evidence, provider-native provenance, warnings, and validation steps.
+- `--context-file`, `--stack`, and `--constraints` carry bounded, redacted agent
+  context into discovery.
+- Provider I/O distinguishes empty, skipped, and failed; it has bounded retry,
+  concurrency, request coalescing, and a 60-second successful-response cache.
+- `fixseek feedback` records explicit useful / not-useful / unsafe outcomes as
+  redacted local JSONL.
 - Run local Web with npm run build && npm run web:dev, then open
   http://127.0.0.1:5173.
 - Browser requests go to Fastify on port 4174 and return DiscoveryResult.
@@ -19,9 +27,7 @@ Updated: 2026-07-13
   `benchmarks/baseline.json`; run it only after reviewing the report and diff.
 - The initial baseline records two relevance misses:
   `deepseek-opencode-bridge` and `esm-commonjs-vite`.
-- The implementation supports Brave web search only. `serpapi` currently
-  validates in environment parsing but is returned as an empty provider by
-  `web-search.ts`.
+- Web search supports both Brave and SerpApi.
 
 ## Competitive Findings
 
@@ -39,20 +45,24 @@ integration into developer workflows rather than a one-off result list.
 2. Add benchmark acceptance targets for critical cases; a baseline that records
    a relevance miss must remain visible as an improvement target, not become a
    silent pass condition.
-3. Reconcile the documented/configured web provider list with implementation,
-   or add SerpAPI support.
-4. Add bounded page extraction, official-domain signals, and source-quality
+3. Add bounded page extraction, official-domain signals, and source-quality
    ranking before expanding URL grouping.
-5. Add a session-level “useful / not useful / unsafe” candidate feedback action
-   so benchmark updates can be grounded in reviewed outcomes.
-6. Add an ESLint configuration; current lint fails before linting.
+4. Use reviewed local outcomes as an explicit benchmark/ranking input and add
+   equivalent feedback controls to the Web Guide.
+5. Add an ESLint configuration; current lint fails before linting.
 
 ## Verification
 
-- npm test: 164 tests passed.
-- npm run typecheck: passed.
-- npm run build: passed.
-- Playwright solution-guide flow: passed.
+- `npm test -- --runInBand`: 26 suites and 227 tests passed.
+- `npm run typecheck`: passed.
+- `npm run build`: passed, including the Web bundle.
+- `git diff --check`: passed.
+- The global `fixseek` executable resolves to this checkout's
+  `dist/cli/index.js`.
+- Real npm, GitHub, and Web CLI smoke searches each returned `complete`, exit
+  code 0, valid JSON, candidates, and no stderr.
+- Global `fixseek feedback` smoke test wrote and reloaded a temporary outcome
+  record successfully.
 - npm run lint: blocked by missing ESLint configuration.
 - The initial real benchmark baseline was created intentionally after review.
 

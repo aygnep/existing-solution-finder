@@ -6,6 +6,9 @@ import { createMockProvider, getBuiltinMockCandidates } from './mock-provider.js
 import { searchGitHubMultiQuery } from './github-search.js';
 import { searchPackages } from './package-search.js';
 import { searchWeb } from './web-search.js';
+import { mapWithConcurrency } from './provider-runtime.js';
+
+const QUERY_CONCURRENCY = 3;
 
 export async function createDiscoverySearchers(mode: DiscoveryMode): Promise<DiscoverySearchers> {
   return mode === 'mock' ? createMockSearchers() : createRealSearchers();
@@ -27,9 +30,10 @@ function createRealSearchers(): DiscoverySearchers {
       ? searchGitHubMultiQuery(queries, env)
       : { raw: [], state: 'skipped', message: 'GitHub token is not configured.' },
     web: async (queries) => env.WEB_SEARCH_API_KEY
-      ? (await Promise.all(queries.map((query) => searchWeb(query, env)))).flat()
+      ? (await mapWithConcurrency(queries, QUERY_CONCURRENCY, (query) => searchWeb(query, env))).flat()
       : { raw: [], state: 'skipped', message: 'Web search key is not configured.' },
-    npm: async (queries) => (await Promise.all(queries.map((query) => searchPackages(query, env)))).flat(),
+    npm: async (queries) =>
+      (await mapWithConcurrency(queries, QUERY_CONCURRENCY, (query) => searchPackages(query, env))).flat(),
   };
 }
 

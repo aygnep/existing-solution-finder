@@ -12,8 +12,13 @@ parse → query plan → provider runs → score → rank → group → validati
         ↓
 DiscoveryResult
   ├─ CLI summarizer
+  ├─ CLI JSON agent envelope
   ├─ Fastify gateway: POST /api/discover
   └─ React Web Solution Guide and Markdown exporters
+
+authorized validation
+        ↓
+fixseek feedback → redacted, versioned JSONL outcome record
 ~~~
 
 CLI and Web use the same discovery service. UI code must not create separate
@@ -28,15 +33,31 @@ scoring or safety behavior.
 | Trust | scorer.ts, ranker.ts | Deterministic fit, maintenance, safety penalties, order, explanation |
 | Evidence | solution-grouper.ts, validation-guidance.ts | Conservative canonical-URL grouping and non-executing validation |
 | Providers | src/providers/ | External I/O and mock or real provider factory |
+| Feedback | src/feedback/ | Problem fingerprints and redacted useful / not-useful / unsafe JSONL outcomes |
 | Web | src/web/gateway.ts, web/src/ | Local credential boundary and session-only React workflow |
 | Exports | src/exports/solution-report.ts | Sourced report and agent-skill draft |
 
 ## Provider Behavior
 
-Mock mode is deterministic. Real mode uses GitHub when GITHUB_TOKEN exists,
-npm without a credential, and optional web search when WEB_SEARCH_API_KEY
-exists. Missing credentials produce skipped; runtime problems produce failed;
-both preserve results from other providers.
+The CLI defaults to real mode; mock mode is deterministic and explicit. Real
+mode uses GitHub when GITHUB_TOKEN exists, npm without a credential, and web
+search when WEB_SEARCH_API_KEY exists. Missing credentials produce `skipped`,
+legitimate zero results produce `empty`, and runtime problems produce `failed`.
+Provider requests have bounded retry, concurrency, and short-lived in-process
+caching; partial results from healthy providers survive.
+
+Agent JSON output retains the request, search plan, provider states, evidence,
+warnings, provider-native provenance, and validation steps. It does not make an
+implementation decision: the calling agent verifies sources and proposes the
+change.
+
+## Outcome Feedback
+
+`fixseek feedback` appends a local JSONL record containing only a candidate URL,
+a normalized problem fingerprint, an outcome, optional redacted notes, and a
+timestamp. It does not store repository contents and does not silently affect
+ranking yet. `FIXSEEK_OUTCOME_FILE` can override the default
+`~/.config/fixseek/outcomes.jsonl` path.
 
 ## Local Web Runtime
 
@@ -49,3 +70,4 @@ The browser never receives provider keys or persistent storage.
 2. Provider code owns network I/O.
 3. Scores, warnings, and evidence remain visible in exports.
 4. Users decide whether to execute a candidate.
+5. Provider failures are never represented as legitimate empty searches.

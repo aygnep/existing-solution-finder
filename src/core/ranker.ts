@@ -6,6 +6,13 @@ export interface RankerOptions {
 }
 
 /**
+ * Candidates below this score are labelled "poor matches" by the presenter.
+ * They may still fill otherwise empty result slots, but they do not displace a
+ * stronger result merely to manufacture provider diversity.
+ */
+const MIN_DIVERSITY_SCORE = 10;
+
+/**
  * Sorts, deduplicates, and ranks scored candidates.
  *
  * Tie-breaking rules (from SCORING_RULES.md):
@@ -24,7 +31,7 @@ export function rankCandidates(
 
   const deduped = deduplicateByUrl(candidates);
   const sorted = [...deduped].sort(compareCandidates);
-  const sliced = sorted.slice(0, maxResults);
+  const sliced = selectSourceDiverseResults(sorted, maxResults);
 
   return sliced.map((candidate, index) => ({
     ...candidate,
@@ -33,6 +40,52 @@ export function rankCandidates(
     candidateType: resolveCandidateType(candidate),
     nextStep: buildNextStep(candidate),
   }));
+}
+
+/**
+ * Reserves at most one slot for each provider's best viable candidate, ordered
+ * by the normal score comparator, then fills remaining slots from the global
+ * ranking. The final list is sorted normally, so diversity only changes which
+ * candidates cross the result cutoff; it never rewrites score order.
+ *
+ * A candidate is viable for a reserved slot when it is not safety-blocked and
+ * reaches the presenter's minimum weak-match score. Poor or blocked candidates
+ * can still appear when spare result capacity exists.
+ */
+function selectSourceDiverseResults(
+  sorted: readonly ScoredCandidate[],
+  maxResults: number,
+): readonly ScoredCandidate[] {
+  if (maxResults <= 0 || sorted.length === 0) return [];
+
+  const providerLeaders: ScoredCandidate[] = [];
+  const seenProviders = new Set<string>();
+
+  for (const candidate of sorted) {
+    if (
+      !seenProviders.has(candidate.provider) &&
+      isViableForDiversity(candidate)
+    ) {
+      seenProviders.add(candidate.provider);
+      providerLeaders.push(candidate);
+    }
+  }
+
+  const selected = new Set(providerLeaders.slice(0, maxResults));
+
+  for (const candidate of sorted) {
+    if (selected.size >= maxResults) break;
+    selected.add(candidate);
+  }
+
+  return sorted.filter((candidate) => selected.has(candidate)).slice(0, maxResults);
+}
+
+function isViableForDiversity(candidate: ScoredCandidate): boolean {
+  return (
+    candidate.score.trustLevel !== 'BLOCKED' &&
+    candidate.score.displayTotal >= MIN_DIVERSITY_SCORE
+  );
 }
 
 // ─── Deduplication ────────────────────────────────────────────────────────────

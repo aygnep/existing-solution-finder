@@ -1,7 +1,16 @@
 import type { ParsedProblem } from '../types/problem.js';
 import type { RankedCandidate } from '../types/score.js';
+import type {
+  EvidenceItem,
+  SolutionCandidate,
+  ValidationStep,
+} from '../types/discovery.js';
 import { t } from '../i18n/messages.js';
 import type { Language } from '../i18n/types.js';
+import { redactSensitiveText } from '../feedback/redaction.js';
+import { createValidationSteps } from './validation-guidance.js';
+
+const MAX_EVIDENCE_EXCERPT_LENGTH = 1_200;
 
 const SCORE_LABELS: Record<string, string> = {
   HIGH: '🟢 Strong Match',
@@ -100,6 +109,9 @@ function formatCandidate(candidate: RankedCandidate, lang: Language): string[] {
     lines.push(`      ${t(lang, 'desc')}: ${truncate(candidate.description, 100)}`);
   }
 
+  lines.push('');
+  lines.push(...formatEvidence(candidate, lang));
+
   // Warnings
   if (candidate.score.warnings.length > 0) {
     lines.push('');
@@ -131,6 +143,9 @@ function formatCandidate(candidate: RankedCandidate, lang: Language): string[] {
     lines.push(`        ${t(lang, 'penalties')}: ${penaltyStr}`);
   }
 
+  lines.push('');
+  lines.push(...formatValidation(candidate, lang));
+
   // Next step — always shown
   lines.push('');
   lines.push(`      ▶  ${t(lang, 'nextSteps')}: ${candidate.nextStep}`);
@@ -138,6 +153,91 @@ function formatCandidate(candidate: RankedCandidate, lang: Language): string[] {
   lines.push('      ' + '─'.repeat(54));
 
   return lines;
+}
+
+function formatEvidence(candidate: RankedCandidate, lang: Language): string[] {
+  const label = lang === 'zh' ? '来源证据' : 'Source evidence';
+  const excerptLabel = lang === 'zh' ? '原文摘录' : 'Source excerpt';
+  const evidence = getEvidence(candidate);
+  const lines = [`      ${label}:`];
+
+  for (const item of evidence) {
+    lines.push(`        - [${item.sourceKind}] ${item.sourceUrl}`);
+    if (item.excerpt) {
+      const excerpt = selectEvidenceExcerpt(redactSensitiveText(item.excerpt));
+      lines.push(...indentMultiline(
+        `${excerptLabel}: ${excerpt.text}`,
+        '          ',
+      ));
+      if (excerpt.truncated) {
+        lines.push(
+          `          ${lang === 'zh' ? '［摘录已截断；请打开来源查看完整上下文］' : '[Excerpt truncated; open the source for full context]'}`,
+        );
+      }
+    }
+  }
+
+  return lines;
+}
+
+function formatValidation(candidate: RankedCandidate, lang: Language): string[] {
+  const label = lang === 'zh' ? '验证闭环' : 'Validation loop';
+  const expectedLabel = lang === 'zh' ? '预期观察' : 'Expected observation';
+  const riskLabel = lang === 'zh' ? '风险' : 'Risk';
+  const steps = getValidationSteps(candidate);
+  const lines = [`      ${label}:`];
+
+  steps.forEach((step, index) => {
+    lines.push(`        ${index + 1}. ${step.instruction}`);
+    lines.push(`           ${expectedLabel}: ${step.expectedObservation}`);
+    if (step.riskNote) {
+      lines.push(`           ${riskLabel}: ${step.riskNote}`);
+    }
+  });
+
+  return lines;
+}
+
+function getEvidence(candidate: RankedCandidate): readonly EvidenceItem[] {
+  if (isSolutionCandidate(candidate) && candidate.evidence.length > 0) {
+    return candidate.evidence;
+  }
+
+  return [{
+    sourceUrl: candidate.url,
+    sourceKind: candidate.provider,
+    title: candidate.name,
+    excerpt: candidate.readmeSnippet || candidate.description,
+    retrievedAt: '',
+  }];
+}
+
+function getValidationSteps(candidate: RankedCandidate): readonly ValidationStep[] {
+  if (isSolutionCandidate(candidate) && candidate.validationSteps.length > 0) {
+    return candidate.validationSteps;
+  }
+  return createValidationSteps(candidate);
+}
+
+function isSolutionCandidate(candidate: RankedCandidate): candidate is SolutionCandidate {
+  const possible = candidate as Partial<SolutionCandidate>;
+  return Array.isArray(possible.evidence) && Array.isArray(possible.validationSteps);
+}
+
+function indentMultiline(text: string, indentation: string): string[] {
+  return text.split(/\r?\n/).map((line) => `${indentation}${line}`);
+}
+
+function selectEvidenceExcerpt(
+  sourceText: string,
+): { readonly text: string; readonly truncated: boolean } {
+  if (sourceText.length <= MAX_EVIDENCE_EXCERPT_LENGTH) {
+    return { text: sourceText, truncated: false };
+  }
+  return {
+    text: sourceText.slice(0, MAX_EVIDENCE_EXCERPT_LENGTH),
+    truncated: true,
+  };
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

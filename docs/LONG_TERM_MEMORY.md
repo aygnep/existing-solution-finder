@@ -9,8 +9,11 @@ value is evidence, fit, and risk visibility, not generic chat.
 
 - CLI and local Web Guide are equal interfaces over one discovery core.
 - DiscoveryResult, not terminal text, is the source of truth.
-- Mock mode is deterministic; real providers are optional and fail visibly.
+- CLI real mode is the default; mock mode is explicit, deterministic, and only
+  for tests or demonstrations.
 - Evidence, score explanations, warnings, and validation survive exports.
+- Coding agents consume a stable JSON envelope, verify independent sources,
+  infer a proposal, and retain user control over execution.
 - LLMs may summarize sourced evidence later but never control search, scoring,
   safety classification, or execution.
 
@@ -24,15 +27,17 @@ value is evidence, fit, and risk visibility, not generic chat.
 
 - Core owns deterministic discovery behavior.
 - Providers own external I/O; discovery-searchers selects mock or real mode.
+- Provider state distinguishes complete, empty, skipped, and failed; bounded
+  retries, concurrency, and short process-local caching belong to provider I/O.
 - Fastify is a local credential boundary, not a multi-user backend.
 - React state is ephemeral; persistence and accounts are deferred.
 - Canonical URL grouping is intentionally conservative.
 - Local repository context is not yet an input source. Any future codebase or
   MCP integration must remain a provider behind the same DiscoveryResult,
   provenance, scoring, and safety boundaries.
-- User outcome feedback and long-lived quality learning are deferred with
-  persistence; they must not silently collect repository content or create
-  accounts.
+- Outcome feedback is explicit local JSONL containing candidate URL, problem
+  fingerprint, outcome, optional redacted notes, and timestamp. Automatic
+  ranking changes from feedback remain deferred and must never be silent.
 
 ## Documentation Policy
 
@@ -46,12 +51,12 @@ value is evidence, fit, and risk visibility, not generic chat.
   `benchmarks/`; ordinary tests remain offline and baseline replacement is
   explicit.
 - Web evidence is provider metadata/snippets, not full-page extraction.
-- Web search implementation currently supports Brave only, even though
-  environment parsing still accepts `serpapi`.
+- Web search supports Brave and SerpApi metadata/snippets.
 - No local code-context, IDE, CI, or MCP workflow integration exists. The tool
   cannot yet compare an external candidate directly with the caller's
   repository, dependency graph, or failing tests.
 - No official-source classifier exists beyond provider metadata and heuristic
   trust signals; retrieved web evidence is still limited to snippets.
 - ESLint configuration is missing.
-- No persistence, private sources, accounts, or team workflow.
+- No account-backed persistence, private sources, or team workflow. Local
+  outcome JSONL is the only durable feedback store.

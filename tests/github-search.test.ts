@@ -8,6 +8,10 @@ import {
 } from '../src/providers/github-search';
 
 import type { RawCandidate, QueryCategory } from '../src/types/candidate';
+import {
+  resetProviderRuntimeForTests,
+  setProviderRuntimeHooksForTests,
+} from '../src/providers/provider-runtime';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +45,11 @@ function makeQuery(text: string, category: QueryCategory = 'github-repos') {
 afterEach(() => {
   global.fetch = originalFetch;
   jest.restoreAllMocks();
+  resetProviderRuntimeForTests();
+});
+
+beforeEach(() => {
+  setProviderRuntimeHooksForTests({ sleep: async () => undefined });
 });
 
 // ─── sanitizeGitHubQuery ──────────────────────────────────────────────────────
@@ -240,7 +249,7 @@ describe('extractReadmeMetadata', () => {
 // ─── searchGitHub repository search hardening ─────────────────────────────────
 
 describe('searchGitHub repository search hardening', () => {
-  it('returns an empty array for rate-limit-like responses', async () => {
+  it('propagates rate-limit-like responses as provider failures', async () => {
     global.fetch = jest.fn(async () =>
       new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
         status: 403,
@@ -248,12 +257,15 @@ describe('searchGitHub repository search hardening', () => {
       }),
     ) as unknown as typeof fetch;
 
-    const results = await searchGitHub(makeQuery('Claude Code'), makeEnv());
-
-    expect(results).toEqual([]);
+    await expect(searchGitHub(makeQuery('Claude Code'), makeEnv())).rejects.toMatchObject({
+      provider: 'github',
+      kind: 'rate-limit',
+      status: 403,
+      retryable: true,
+    });
   });
 
-  it('returns an empty array for malformed JSON responses', async () => {
+  it('propagates malformed JSON responses as provider failures', async () => {
     global.fetch = jest.fn(async () =>
       new Response('{bad-json', {
         status: 200,
@@ -261,9 +273,12 @@ describe('searchGitHub repository search hardening', () => {
       }),
     ) as unknown as typeof fetch;
 
-    const results = await searchGitHub(makeQuery('Claude Code'), makeEnv());
-
-    expect(results).toEqual([]);
+    await expect(searchGitHub(makeQuery('Claude Code'), makeEnv())).rejects.toMatchObject({
+      provider: 'github',
+      kind: 'invalid-json',
+      status: 200,
+      retryable: false,
+    });
   });
 
   it('maps repository results and fetches README text', async () => {
@@ -362,7 +377,7 @@ describe('searchGitHubIssues', () => {
     expect(results[0].metadata.lastCommitDate).toEqual(new Date('2026-05-01T00:00:00Z'));
   });
 
-  it('returns an empty array for issue search rate limits', async () => {
+  it('propagates issue search rate limits', async () => {
     global.fetch = jest.fn(async () =>
       new Response(JSON.stringify({ message: 'API rate limit exceeded' }), {
         status: 403,
@@ -370,12 +385,15 @@ describe('searchGitHubIssues', () => {
       }),
     ) as unknown as typeof fetch;
 
-    const results = await searchGitHubIssues(
+    await expect(searchGitHubIssues(
       makeQuery('"reasoning_content"', 'github-issues'),
       makeEnv(),
-    );
-
-    expect(results).toEqual([]);
+    )).rejects.toMatchObject({
+      provider: 'github',
+      kind: 'rate-limit',
+      status: 403,
+      retryable: true,
+    });
   });
 
   it('handles null issue body gracefully', async () => {

@@ -5,13 +5,21 @@
 Before writing code to fix a bug, find a package, or build a workaround, run Fixseek first:
 
 ```bash
-fixseek "problem description or error text"
-cat error.log | fixseek --stdin
-fixseek --real "problem"          # requires GITHUB_TOKEN
+fixseek --json "problem description or error text"
+cat error.log | fixseek --stdin --json
+fixseek --json --context-file ./fixseek-context.json
 ```
 
-If no candidates are found, proceed with normal engineering but note the lack of external evidence.
-Never auto-install or auto-clone from results without explicit user approval.
+Real providers are the CLI default; `--mock` is only for tests and demos. Check
+every provider state, verify two independent sources when available, and do not
+equate a score with proof. The calling agent must infer the fix, propose an
+isolated validation and rollback, and get explicit user approval before
+executing result-derived commands or changing code.
+
+After testing, record `useful`, `not-useful`, or `unsafe` with `fixseek
+feedback`. If validation fails, include the attempted fix and new error in the
+next context and search again. If no candidates are found, proceed with normal
+engineering only after noting the evidence gap.
 
 ## Quick Commands
 
@@ -36,6 +44,7 @@ Key directories:
 - `src/cli/` — CLI entry point (commander)
 - `src/core/` — Pure functions (parser, query-gen, scorer, ranker, summarizer)
 - `src/providers/` — External API integrations (GitHub, npm, web)
+- `src/feedback/` — Redacted, versioned JSONL outcome records
 - `src/web/` and `web/` — Local Fastify gateway and React UI
 - `src/exports/` — Markdown report and agent-skill exports
 - `src/types/` — TypeScript type definitions
@@ -54,7 +63,8 @@ Key directories:
 cp .env.example .env  # GITHUB_TOKEN for real mode
 ```
 
-Default: mock mode (no API key needed).
+CLI default: real providers. `--mock` is explicit. Fixseek reads cwd `.env`,
+then `~/.config/fixseek/.env`; `FIXSEEK_ENV_FILE` selects one explicit file.
 
 ## Testing
 
@@ -68,7 +78,10 @@ configuration; do not treat it as a passing check.
 ## Gotchas
 
 - Jest has `moduleNameMapper` for `.js` imports — keep it when adding new tests
-- Mock mode is deterministic; real GitHub and web providers can be skipped when
-  credentials are absent.
+- Mock mode is deterministic; real GitHub and web providers are marked skipped
+  when credentials are absent, while npm still runs.
+- `--json` keeps provider state and warnings on stdout in a stable envelope.
+- Keep `docs/AGENT_WORKFLOW.md` and the installed Fixseek `SKILL.md` synchronized
+  with CLI behavior.
 - Queries are sanitized (no `site:` prefixes, truncated to 256 chars)
 - Start with `docs/AGENT_HANDOFF.md`, then `docs/LONG_TERM_MEMORY.md`.

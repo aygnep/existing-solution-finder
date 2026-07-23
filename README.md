@@ -32,7 +32,9 @@ cat error.log | fixseek --stdin
 fixseek --stack "Node.js,Docker" "container networking issue"
 ```
 
-Mock mode is the default and does not require an API key.
+CLI searches real providers by default. npm needs only outbound network access;
+GitHub and web are used when their credentials are configured. `--mock` is only
+for deterministic tests and demos.
 
 ## Usage
 
@@ -43,17 +45,21 @@ fixseek "reasoning_content error with Claude Code + DeepSeek"
 # Read a log from stdin
 cat error.log | fixseek --stdin
 
-# Real search across configured providers
-fixseek --real "vite module not found"
+# Real search across configured providers (the default)
+fixseek "vite module not found"
 
 # Real npm search (no token required; network access is required)
-fixseek --real --provider npm "ESM CommonJS package error"
+fixseek --provider npm "ESM CommonJS package error"
 
 # Real GitHub search (requires GITHUB_TOKEN)
-fixseek --real --provider github "vite module not found"
+fixseek --provider github "vite module not found"
 
 # Real web search (requires WEB_SEARCH_API_KEY)
-fixseek --real --provider web "vite module not found"
+fixseek --provider web "vite module not found"
+
+# Stable machine-readable output for coding agents
+fixseek --json --stack "Vite,Node.js" \
+  --constraints "no dependency upgrade" "vite module not found"
 
 # Chinese output
 fixseek --lang zh "reasoning_content 报错"
@@ -62,10 +68,11 @@ fixseek --lang zh "reasoning_content 报错"
 fixseek --max-results 5 "npm package ESM CommonJS error"
 ```
 
-Supported providers are `github`, `web`, and `npm`. Real GitHub searches require
-`GITHUB_TOKEN`, real web searches require `WEB_SEARCH_API_KEY`, and npm searches
-do not require a token. The default real mode attempts every provider whose
-credentials are available and reports skipped providers on stderr.
+Supported providers are `github`, `web`, and `npm`. GitHub searches require
+`GITHUB_TOKEN`, web searches require `WEB_SEARCH_API_KEY`, and npm searches do
+not require a token. The default mode attempts every provider and preserves
+each provider's `complete`, `empty`, `skipped`, or `failed` state. `--real`
+remains accepted as an explicit compatibility flag.
 
 ### Advanced Options
 
@@ -76,10 +83,14 @@ fixseek solve "npm package ESM CommonJS error"
 # Add stack context
 fixseek --stack "Node.js,Docker" "container networking issue"
 
-# Limit to a specific provider
-fixseek --real --provider github "vite module not found"
+# Add constraints or a structured agent context file
+fixseek --constraints "open source,no cloud" "container networking issue"
+fixseek --json --context-file ./fixseek-context.json
 
-# Force mock mode or adjust log level
+# Limit to a specific provider
+fixseek --provider github "vite module not found"
+
+# Explicit test/demo mode or adjusted log level
 fixseek --mock "dependency resolution error"
 fixseek --log-level debug "dependency resolution error"
 ```
@@ -93,25 +104,52 @@ fixseek "vite module not found after pnpm install"
 
 cat ./error.log | fixseek --stdin --max-results 5
 
-fixseek --real "Docker host.docker.internal connection refused"
+fixseek "Docker host.docker.internal connection refused"
 
 fixseek --lang zh "ESM CommonJS interop 包报错"
 ```
 
 ## Configuration
 
-Copy `.env.example` to `.env` when you want real providers.
+Copy `.env.example` to `.env` to configure authenticated providers. Fixseek
+loads the first available values from the current directory's `.env` and then
+`~/.config/fixseek/.env`. Set `FIXSEEK_ENV_FILE` to use one explicit file.
 
 | Variable | Purpose |
 | --- | --- |
-| `GITHUB_TOKEN` | GitHub token for `--real --provider github`. Not needed in mock mode. |
+| `GITHUB_TOKEN` | GitHub token for `--provider github`. Not needed in mock mode. |
 | `WEB_SEARCH_PROVIDER` | Optional web search provider: `brave` or `serpapi`; defaults to `brave`. |
 | `WEB_SEARCH_API_KEY` | API key for the configured web search provider. |
+| `FIXSEEK_ENV_FILE` | Optional explicit environment-file path. |
+| `FIXSEEK_OUTCOME_FILE` | Optional outcome JSONL path; defaults to `~/.config/fixseek/outcomes.jsonl`. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, or `error`. Default: `warn`. |
 | `MAX_RESULTS_PER_PROVIDER` | Max results requested per provider. Default: `10`. |
 | `REQUEST_TIMEOUT_MS` | Request timeout in milliseconds. Default: `10000`. |
 
 Do not commit `.env` or real tokens.
+
+## Coding-Agent Workflow
+
+Use `fixseek --json` before implementing an unfamiliar fix. Check every
+provider state, verify at least two independent sources when available, and
+treat scores as retrieval signals rather than proof. The calling agent should
+infer the root cause, propose an isolated validation and rollback, and obtain
+user approval before executing result-derived commands or modifying code.
+
+After validation, record the observed result:
+
+```bash
+fixseek feedback \
+  --problem "vite module not found after pnpm install" \
+  --candidate-url "https://github.com/example/project/issues/123" \
+  --outcome useful \
+  --notes "Confirmed in an isolated reproduction" \
+  --json
+```
+
+Outcomes are `useful`, `not-useful`, or `unsafe`. If validation fails, add the
+attempted fix and new error to a context file and search again. See
+[`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md).
 
 ## What Fixseek Does Not Do
 

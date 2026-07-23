@@ -1,5 +1,6 @@
 import type { SolutionCandidate } from '../types/discovery.js';
 import type { RankedCandidate } from '../types/score.js';
+import { createValidationSteps } from './validation-guidance.js';
 
 export function groupSolutions(
   candidates: readonly RankedCandidate[],
@@ -24,11 +25,11 @@ export function groupSolutions(
         sourceUrl: candidate.url,
         sourceKind: candidate.provider,
         title: candidate.name,
-        excerpt: candidate.readmeSnippet ?? candidate.description,
+        excerpt: candidate.readmeSnippet || candidate.description,
         retrievedAt: retrievedAt.toISOString(),
       })),
       relatedCandidates: ordered,
-      validationSteps: [],
+      validationSteps: createValidationSteps(primary),
     };
   });
 }

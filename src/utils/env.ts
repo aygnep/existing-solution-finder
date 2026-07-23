@@ -1,7 +1,10 @@
 import { z } from 'zod';
 import * as dotenv from 'dotenv';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { resolve } from 'node:path';
 
-dotenv.config();
+let dotenvLoaded = false;
 
 const emptyToUndefined = (value: unknown): unknown =>
   value === '' ? undefined : value;
@@ -20,11 +23,40 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+export function resolveEnvPaths(
+  cwd = process.cwd(),
+  home = homedir(),
+  explicitPath = process.env.FIXSEEK_ENV_FILE,
+): readonly string[] {
+  if (explicitPath?.trim()) {
+    return [resolve(cwd, explicitPath.trim())];
+  }
+
+  return [
+    resolve(cwd, '.env'),
+    resolve(home, '.config', 'fixseek', '.env'),
+  ];
+}
+
+function loadDotenvFiles(): void {
+  if (dotenvLoaded) return;
+
+  const seen = new Set<string>();
+  for (const path of resolveEnvPaths()) {
+    if (seen.has(path) || !existsSync(path)) continue;
+    seen.add(path);
+    dotenv.config({ path, override: false });
+  }
+
+  dotenvLoaded = true;
+}
+
 /**
  * Loads and validates environment variables at startup.
  * Throws a descriptive error if required variables are missing.
  */
 export function loadEnv(): Env {
+  loadDotenvFiles();
   const result = envSchema.safeParse(process.env);
 
   if (!result.success) {

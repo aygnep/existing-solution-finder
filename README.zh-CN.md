@@ -35,7 +35,8 @@ cat error.log | fixseek --stdin
 fixseek --stack "Node.js,Docker" "container networking issue"
 ```
 
-默认使用 mock 模式，不需要 token，也不会访问真实搜索 API。
+CLI 默认访问真实 provider。npm 只需要能联网；配置凭据后会同时使用 GitHub
+和 Web。`--mock` 只用于确定性的测试和演示。
 
 ## 常用命令
 
@@ -46,17 +47,21 @@ fixseek "问题描述"
 # 从 stdin 读取错误日志
 cat error.log | fixseek --stdin
 
-# 使用真实搜索（按 provider 配置凭据）
-fixseek --real "vite module not found"
+# 使用真实搜索（默认行为）
+fixseek "vite module not found"
 
 # 真实 npm 搜索（不需要 token，但需要网络）
-fixseek --real --provider npm "ESM CommonJS package error"
+fixseek --provider npm "ESM CommonJS package error"
 
 # 真实 GitHub 搜索（需要 GITHUB_TOKEN）
-fixseek --real --provider github "vite module not found"
+fixseek --provider github "vite module not found"
 
 # 真实 Web 搜索（需要 WEB_SEARCH_API_KEY）
-fixseek --real --provider web "vite module not found"
+fixseek --provider web "vite module not found"
+
+# 给 coding agent 使用的稳定 JSON 输出
+fixseek --json --stack "Vite,Node.js" \
+  --constraints "不能升级依赖" "vite module not found"
 
 # 中文输出
 fixseek --lang zh "reasoning_content 报错"
@@ -74,36 +79,65 @@ fixseek solve "问题描述"
 # 补充技术栈上下文
 fixseek --stack "Node.js,Docker" "container networking issue"
 
-# 限定搜索 provider
-fixseek --real --provider github "vite module not found"
+# 补充约束或读取结构化 agent 上下文
+fixseek --constraints "开源,不能使用云服务" "container networking issue"
+fixseek --json --context-file ./fixseek-context.json
 
-# 强制 mock 模式或调整日志级别
+# 限定搜索 provider
+fixseek --provider github "vite module not found"
+
+# 显式测试/演示模式或调整日志级别
 fixseek --mock "dependency resolution error"
 fixseek --log-level debug "dependency resolution error"
 ```
 
 ## 配置
 
-如果只使用默认 mock 模式，不需要配置环境变量。
-
-如果要使用 real GitHub 模式：
+如果要使用 GitHub provider：
 
 ```bash
 cp .env.example .env
 # 编辑 .env，填入 GITHUB_TOKEN
-fixseek --real --provider github "vite module not found"
+fixseek --provider github "vite module not found"
 ```
+
+Fixseek 依次读取当前目录的 `.env` 和 `~/.config/fixseek/.env`，已经存在的
+环境变量不会被覆盖。也可以用 `FIXSEEK_ENV_FILE` 指定唯一的配置文件。
 
 当前支持的环境变量：
 
-- `GITHUB_TOKEN`: real GitHub 搜索需要；mock 模式不需要。
+- `GITHUB_TOKEN`: GitHub 搜索需要；mock 模式不需要。
 - `WEB_SEARCH_PROVIDER`: 可选 web 搜索 provider，支持 `brave` 或 `serpapi`，默认 `brave`。
 - `WEB_SEARCH_API_KEY`: web 搜索 provider 的 API key。
+- `FIXSEEK_ENV_FILE`: 可选，显式指定环境变量文件。
+- `FIXSEEK_OUTCOME_FILE`: 可选，反馈 JSONL 路径；默认是 `~/.config/fixseek/outcomes.jsonl`。
 - `LOG_LEVEL`: `debug`、`info`、`warn`、`error`，默认 `warn`。
 - `MAX_RESULTS_PER_PROVIDER`: 每个 provider 的最大返回数量，默认 `10`。
 - `REQUEST_TIMEOUT_MS`: 请求超时时间，单位毫秒，默认 `10000`。
 
 不要提交 `.env`，不要把真实 token 写进代码、README 或 issue。
+
+## Coding Agent 工作流
+
+对于真实工程问题，agent 应先运行 `fixseek --json`，检查每个 provider 的
+`complete`、`empty`、`skipped` 或 `failed` 状态，并在条件允许时核验至少
+两个独立来源。分数只是检索信号，不是修复已被证明有效。agent 仍需推导根因、
+提出隔离验证与回滚方案，并在执行候选命令或修改代码前取得用户授权。
+
+验证后记录实际结果：
+
+```bash
+fixseek feedback \
+  --problem "pnpm install 后 vite module not found" \
+  --candidate-url "https://github.com/example/project/issues/123" \
+  --outcome useful \
+  --notes "已在隔离复现中确认" \
+  --json
+```
+
+结果可选 `useful`、`not-useful` 或 `unsafe`。验证失败时，把已尝试方案和
+新错误加入 context file 后重新搜索。完整流程见
+[`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md)。
 
 ## 本地开发
 
@@ -146,7 +180,8 @@ AI 很适合解释和推理，但它不一定知道最新的 issue、仓库或 n
 
 ### GitHub token 是否必须？
 
-默认 mock 模式不需要。GitHub real provider 需要 `GITHUB_TOKEN`，Web real provider 需要 `WEB_SEARCH_API_KEY`，npm provider 不需要 token。
+只使用 npm 或 `--mock` 时不需要。GitHub provider 需要 `GITHUB_TOKEN`，
+Web provider 需要 `WEB_SEARCH_API_KEY`。
 
 ### npm 安装后命令找不到怎么办？
 

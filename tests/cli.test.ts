@@ -1,5 +1,6 @@
 import { PassThrough, Writable } from 'stream';
 import { createProgram, runSolve, type CliIo } from '../src/cli/index';
+import { resetProviderRuntimeForTests } from '../src/providers/provider-runtime';
 import packageJson from '../package.json';
 
 class CaptureStream extends Writable {
@@ -31,6 +32,7 @@ const originalFetch = global.fetch;
 const originalEnv = { ...process.env };
 
 afterEach(() => {
+  resetProviderRuntimeForTests();
   global.fetch = originalFetch;
   process.env = { ...originalEnv };
   jest.restoreAllMocks();
@@ -38,12 +40,13 @@ afterEach(() => {
 });
 
 describe('Fixseek CLI UX', () => {
-  it('supports default query usage without solve', async () => {
+  it('supports direct query usage without solve', async () => {
     const { io, stdout, stderr } = makeIo();
     const program = createProgram(io);
     await program.parseAsync([
       'node',
       'fixseek',
+      '--mock',
       '--max-results',
       '1',
       'reasoning_content error with Claude Code',
@@ -63,6 +66,7 @@ describe('Fixseek CLI UX', () => {
       'node',
       'fixseek',
       'solve',
+      '--mock',
       '--max-results',
       '1',
       'reasoning_content error with Claude Code',
@@ -77,7 +81,7 @@ describe('Fixseek CLI UX', () => {
     const { io, stdout } = makeIo('reasoning_content error with Claude Code');
     const code = await runSolve(
       [],
-      { stdin: true, maxResults: '1', logLevel: 'warn', lang: 'en' },
+      { stdin: true, mock: true, maxResults: '1', logLevel: 'warn', lang: 'en' },
       io,
     );
 
@@ -103,6 +107,7 @@ describe('Fixseek CLI UX', () => {
     expect(help).toContain('find existing fixes');
     expect(help).toContain('fixseek "reasoning_content error with Claude Code + DeepSeek"');
     expect(help).toContain('cat error.log | fixseek --stdin');
+    expect(help).toContain('fixseek --json');
     expect(help).toContain('fixseek --real');
     expect(help).toContain('fixseek --lang zh');
     expect(help).toContain('fixseek --max-results 5');
@@ -173,8 +178,8 @@ describe('Fixseek CLI UX', () => {
   });
 
   it('reports providers skipped for missing credentials', async () => {
-    delete process.env.GITHUB_TOKEN;
-    delete process.env.WEB_SEARCH_API_KEY;
+    process.env.GITHUB_TOKEN = '';
+    process.env.WEB_SEARCH_API_KEY = '';
     global.fetch = jest.fn(async () => new Response(JSON.stringify({ objects: [] }), { status: 200 })) as unknown as typeof fetch;
 
     const { io, stdout, stderr } = makeIo();

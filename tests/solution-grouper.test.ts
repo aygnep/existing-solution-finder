@@ -43,5 +43,24 @@ describe('groupSolutions', () => {
     expect(groups).toHaveLength(1);
     expect(groups[0]!.evidence).toHaveLength(2);
     expect(groups[0]!.relatedCandidates).toHaveLength(2);
+    expect(groups[0]!.validationSteps.map((step) => step.id)).toEqual(
+      expect.arrayContaining([
+        'verify-independent-sources',
+        'check-versions-constraints',
+        'propose-isolated-test',
+        'propose-rollback',
+        'record-observed-result',
+        'refine-or-research',
+      ]),
+    );
+  });
+
+  it('preserves source excerpts verbatim', () => {
+    const excerpt = 'First line from source.\n  Second line with source indentation.';
+    const groups = groupSolutions([
+      candidate({ readmeSnippet: excerpt }),
+    ], new Date('2026-07-10T00:00:00Z'));
+
+    expect(groups[0]!.evidence[0]!.excerpt).toBe(excerpt);
   });
 });
