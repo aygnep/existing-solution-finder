@@ -33,6 +33,9 @@ npm run lint
 npx playwright test e2e/solution-guide.spec.ts
 ~~~
 
+Set `FIXSEEK_REAL_E2E=1` only when intentionally running the separately timed
+external-provider smoke test.
+
 ## Documentation
 
 Update stable docs when behavior changes. Do not keep dated task plans or

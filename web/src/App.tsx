@@ -105,14 +105,14 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
     <section className="workbench">
       <form className="discovery-panel" onSubmit={(event) => void runDiscovery(event)}>
         <label htmlFor="problem">{text.problem}</label>
-        <textarea id="problem" value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="Vite cannot find module after pnpm install" />
+        <textarea id="problem" value={problem} onChange={(event) => setProblem(event.target.value)} placeholder="Vite cannot find module after pnpm install" disabled={isLoading} />
         <label htmlFor="stack">{text.stack}</label>
-        <input id="stack" value={stack} onChange={(event) => setStack(event.target.value)} placeholder={text.stackHint} />
+        <input id="stack" value={stack} onChange={(event) => setStack(event.target.value)} placeholder={text.stackHint} disabled={isLoading} />
         <label htmlFor="constraints">{text.constraints}</label>
-        <input id="constraints" value={constraints} onChange={(event) => setConstraints(event.target.value)} placeholder={text.constraintsHint} />
+        <input id="constraints" value={constraints} onChange={(event) => setConstraints(event.target.value)} placeholder={text.constraintsHint} disabled={isLoading} />
         <fieldset><legend>{text.providers}</legend>
           <div className="provider-list">{PROVIDERS.map((provider) => <label key={provider}>
-            <input type="checkbox" checked={providers.includes(provider)} onChange={() => toggleProvider(provider)} />
+            <input type="checkbox" checked={providers.includes(provider)} onChange={() => toggleProvider(provider)} disabled={isLoading} />
             {providerLabel(provider)}
           </label>)}</div>
         </fieldset>

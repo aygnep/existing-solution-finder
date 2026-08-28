@@ -31,9 +31,17 @@ describe('Solution Guide', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Searching providers');
     expect(screen.getByRole('button', { name: 'Searching providers…' })).toBeDisabled();
+    expect(screen.getByLabelText('Describe the problem')).toBeDisabled();
+    expect(screen.getByLabelText('Tech stack')).toBeDisabled();
+    expect(screen.getByLabelText('Constraints')).toBeDisabled();
+    expect(screen.getByLabelText('GitHub')).toBeDisabled();
+    expect(screen.getByLabelText('npm')).toBeDisabled();
+    expect(screen.getByLabelText('Web')).toBeDisabled();
     resolveDiscovery(result);
     await screen.findByLabelText('Provider status');
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Describe the problem')).toBeEnabled();
+    expect(screen.getByLabelText('GitHub')).toBeEnabled();
   });
 
   it('sends a real-mode request from the workbench', async () => {

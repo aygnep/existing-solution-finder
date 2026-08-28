@@ -59,8 +59,9 @@ integration into developer workflows rather than a one-off result list.
 - `npm run typecheck`: passed.
 - `npm run build`: passed, including the Web bundle.
 - `npm run lint`: passed.
-- `npx playwright test e2e/solution-guide.spec.ts`: passed with the real
-  provider loading state visible before results.
+- `npx playwright test e2e/solution-guide.spec.ts`: deterministic Web flow
+  passed; the external-provider smoke test is opt-in with `FIXSEEK_REAL_E2E=1`
+  and has its own provider-aligned timeout.
 - `git diff --check`: passed.
 - The global `fixseek` executable resolves to this checkout's
   `dist/cli/index.js`.

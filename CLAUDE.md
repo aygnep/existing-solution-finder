@@ -78,10 +78,10 @@ then `~/.config/fixseek/.env`; `FIXSEEK_ENV_FILE` selects one explicit file.
 Tests use Jest with `ts-jest`. Module mapping configured for `.js` → no extension.
 Coverage thresholds: 80% lines, 70% branches.
 
-Run `npx playwright test e2e/solution-guide.spec.ts` for the local Web flow.
-`npm run lint` checks the Node source, tests, Web source, and Playwright flow.
-Real-provider Web assertions allow up to 60 seconds because provider latency is
-external and the UI keeps a visible loading state during the request.
+Run `npx playwright test e2e/solution-guide.spec.ts` for the deterministic local
+Web flow. Set `FIXSEEK_REAL_E2E=1` to include the separately timed external
+provider smoke test. `npm run lint` checks the Node source, tests, Web source,
+and Playwright flow.
 
 ## Gotchas
 
