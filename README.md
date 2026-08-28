@@ -142,6 +142,25 @@ treat scores as retrieval signals rather than proof. The calling agent should
 infer the root cause, propose an isolated validation and rollback, and obtain
 user approval before executing result-derived commands or modifying code.
 
+### Agent Skill Usage
+
+In an agent environment where the Fixseek skill is installed, invoke it with a
+normal request such as:
+
+> Use Fixseek to investigate this Vite module-resolution error before changing
+> the project.
+
+The skill is the orchestration and safety layer: it collects the error, stack,
+versions, constraints, and attempted fixes; runs `fixseek --json`; checks every
+provider state; verifies source evidence; and reports a proposed validation and
+rollback. The Fixseek CLI remains the execution layer that performs the actual
+search. If the skill is not installed, an agent can follow the same workflow by
+calling the CLI directly.
+
+The "agent-skill draft" downloadable from the Web Solution Guide packages
+selected search results for follow-up work. It is not the installed Fixseek
+integration skill itself.
+
 After validation, record the observed result:
 
 ```bash

@@ -124,6 +124,20 @@ Fixseek 依次读取当前目录的 `.env` 和 `~/.config/fixseek/.env`，已经
 两个独立来源。分数只是检索信号，不是修复已被证明有效。agent 仍需推导根因、
 提出隔离验证与回滚方案，并在执行候选命令或修改代码前取得用户授权。
 
+### Agent Skill 使用方式
+
+如果 Agent 环境已经安装 Fixseek Skill，可以直接用自然语言触发，例如：
+
+> 在修改项目之前，使用 Fixseek 调查这个 Vite 模块解析错误。
+
+Skill 是编排与安全约束层：它负责收集错误、技术栈、版本、限制条件和已尝试方案，
+调用 `fixseek --json`，检查每个 provider 的状态，核验来源证据，并给出验证与回滚
+建议。Fixseek CLI 才是真正执行搜索的入口。如果环境中没有安装 Skill，Agent 也
+可以直接调用 CLI，遵循相同工作流。
+
+Web 解决方案向导下载的“agent skill 草稿”是根据所选搜索结果生成的后续工作材料，
+并不是已经安装到 Agent 环境中的 Fixseek 集成 Skill。
+
 验证后记录实际结果：
 
 ```bash
