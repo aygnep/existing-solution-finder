@@ -29,10 +29,9 @@ Run focused tests first, then:
 npm test
 npm run typecheck
 npm run build
+npm run lint
 npx playwright test e2e/solution-guide.spec.ts
 ~~~
-
-npm run lint is currently nonfunctional because no ESLint configuration exists.
 
 ## Documentation
 

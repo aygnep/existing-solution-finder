@@ -57,6 +57,5 @@ value is evidence, fit, and risk visibility, not generic chat.
   repository, dependency graph, or failing tests.
 - No official-source classifier exists beyond provider metadata and heuristic
   trust signals; retrieved web evidence is still limited to snippets.
-- ESLint configuration is missing.
 - No account-backed persistence, private sources, or team workflow. Local
   outcome JSONL is the only durable feedback store.

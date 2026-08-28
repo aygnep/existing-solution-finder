@@ -1,6 +1,6 @@
 # Agent Handoff — Short-Term Memory
 
-Updated: 2026-07-23
+Updated: 2026-07-30
 
 ## Current State
 
@@ -21,6 +21,9 @@ Updated: 2026-07-23
 - The Web Solution Guide is a dark responsive workbench and sends real-mode
   requests by default. Its Chinese / EN switch re-renders generated text and
   exports without repeating provider calls; source evidence stays unchanged.
+- Real-provider Web requests show a localized loading state, disable duplicate
+  submissions, and allow enough browser-test time for bounded provider latency.
+- ESLint covers the Node source, tests, Web source, and Playwright flow.
 - `npm run benchmark:real` reads `benchmarks/cases.json`, calls real providers,
   and prints a redacted report without changing the snapshot.
 - `npm run benchmark:update` intentionally overwrites
@@ -49,13 +52,15 @@ integration into developer workflows rather than a one-off result list.
    ranking before expanding URL grouping.
 4. Use reviewed local outcomes as an explicit benchmark/ranking input and add
    equivalent feedback controls to the Web Guide.
-5. Add an ESLint configuration; current lint fails before linting.
 
 ## Verification
 
-- `npm test -- --runInBand`: 26 suites and 227 tests passed.
+- `npm test -- --runInBand`: 26 suites and 228 tests passed.
 - `npm run typecheck`: passed.
 - `npm run build`: passed, including the Web bundle.
+- `npm run lint`: passed.
+- `npx playwright test e2e/solution-guide.spec.ts`: passed with the real
+  provider loading state visible before results.
 - `git diff --check`: passed.
 - The global `fixseek` executable resolves to this checkout's
   `dist/cli/index.js`.
@@ -63,7 +68,6 @@ integration into developer workflows rather than a one-off result list.
   code 0, valid JSON, candidates, and no stderr.
 - Global `fixseek feedback` smoke test wrote and reloaded a temporary outcome
   record successfully.
-- npm run lint: blocked by missing ESLint configuration.
 - The initial real benchmark baseline was created intentionally after review.
 
 ## Guardrails

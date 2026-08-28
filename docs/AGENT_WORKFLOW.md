@@ -4,6 +4,23 @@ Fixseek retrieves and evaluates existing evidence. The calling agent remains
 responsible for understanding the active repository, proposing a change, asking
 for approval when execution is risky, and validating the result.
 
+## Background Research Mode
+
+When the agent runtime supports background workers and the user has authorized
+delegation, Fixseek research can overlap with independent repository work. Send
+one bounded, read-only research question to a worker and require real JSON
+output, explicit provider states, verified source URLs, and evidence gaps. The
+worker must not install packages, run result-derived commands, modify code, or
+write outcome feedback without separate authorization.
+
+The main agent should immediately continue work that does not depend on the
+search result, such as inspecting the active code, recording versions and
+constraints, or defining an isolated validation and rollback. Collect the
+worker result at the first decision boundary that needs evidence. Do not repeat
+the same search locally or poll continuously. Run synchronously instead when
+research is the immediate blocker, the task is too small to overlap, or no
+authorized worker is available.
+
 ## Closed Loop
 
 1. **Capture the problem**

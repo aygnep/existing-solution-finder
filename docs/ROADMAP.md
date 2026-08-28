@@ -39,10 +39,9 @@ The P2 agent-first workflow is implemented:
 
 ### 3. Polish the Web Guide
 
-- Add stack and constraint editors.
 - Show generated queries and provider skip/failure messages clearly.
 - Add the outcome feedback action to the Web UI.
-- Add an ESLint configuration before treating lint as a release gate.
+- Keep slow real-provider work visibly loading and covered by the browser flow.
 
 ### 4. Release confidence
 

@@ -15,22 +15,22 @@
   "scripts": {
     "build": "npm run build:core && npm run build:web",
     "build:core": "tsc",
-    "build:web": "vite build --config web/vite.config.ts",
+    "build:web": "vite build --config web/vite.config.mts",
     "dev": "tsc --watch",
     "start": "node dist/cli/index.js",
     "web:gateway": "node dist/web/gateway.js",
-    "web:client": "vite --config web/vite.config.ts",
+    "web:client": "vite --config web/vite.config.mts",
     "web:dev": "concurrently \"npm run web:gateway\" \"npm run web:client\"",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "benchmark:real": "npm run build:core && node dist/benchmark/index.js",
     "benchmark:update": "npm run build:core && node dist/benchmark/index.js --update-baseline",
-    "lint": "eslint src tests --ext .ts",
+    "lint": "eslint src tests web/src e2e --ext .ts,.tsx",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test && npm run typecheck && npm run build"
+    "prepublishOnly": "npm run lint && npm test && npm run typecheck && npm run build"
   },
   "keywords": [
     "cli",

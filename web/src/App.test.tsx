@@ -19,6 +19,23 @@ const result = {
 } satisfies DiscoveryResult;
 
 describe('Solution Guide', () => {
+  it('shows progress and prevents duplicate submissions while providers are running', async () => {
+    let resolveDiscovery!: (value: DiscoveryResult) => void;
+    const discover = jest.fn(() => new Promise<DiscoveryResult>((resolve) => {
+      resolveDiscovery = resolve;
+    }));
+    render(<App discover={discover} />);
+
+    fireEvent.change(screen.getByLabelText('Describe the problem'), { target: { value: 'Vite cannot find module' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Search solutions' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Searching providers');
+    expect(screen.getByRole('button', { name: 'Searching providers…' })).toBeDisabled();
+    resolveDiscovery(result);
+    await screen.findByLabelText('Provider status');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('sends a real-mode request from the workbench', async () => {
     const discover = jest.fn().mockResolvedValue(result);
     render(<App discover={discover} />);

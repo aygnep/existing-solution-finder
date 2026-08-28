@@ -36,6 +36,12 @@ CLI searches real providers by default. npm needs only outbound network access;
 GitHub and web are used when their credentials are configured. `--mock` is only
 for deterministic tests and demos.
 
+When the calling environment cannot reach the host VPN/TUN network, run the
+host-only gateway described in
+[`docs/FIXSEEK_HOST_GATEWAY.md`](docs/FIXSEEK_HOST_GATEWAY.md). The first real
+search must request user authorization before starting the loopback listener;
+later searches may reuse a healthy gateway in the same session.
+
 ## Usage
 
 ```bash

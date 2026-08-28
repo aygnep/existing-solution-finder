@@ -17,6 +17,7 @@ const copy = {
     plan: 'Search plan', results: 'Results', why: 'Why it fits', evidence: 'Evidence', warnings: 'Risk warnings',
     validation: 'Validation steps', select: 'Select', report: 'Download report', skill: 'Download agent skill',
     real: 'Real mode', empty: 'Describe a problem to preview the search plan.', failed: 'Discovery failed. Check provider status and retry.',
+    loading: 'Searching providers…',
     stackHint: 'e.g. Node.js, Docker', constraintsHint: 'e.g. local only, MIT', noResults: 'No candidates found.',
   },
   zh: {
@@ -25,6 +26,7 @@ const copy = {
     plan: '检索计划', results: '结果', why: '匹配原因', evidence: '证据', warnings: '风险提示',
     validation: '验证步骤', select: '选择', report: '下载报告', skill: '下载 Agent Skill',
     real: '真实模式', empty: '描述一个问题以预览检索计划。', failed: '检索失败，请检查来源状态后重试。',
+    loading: '正在检索各来源…',
     stackHint: '例如 Node.js、Docker', constraintsHint: '例如仅本地、MIT', noResults: '未找到候选结果。',
   },
 } as const;
@@ -38,6 +40,7 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
   const [result, setResult] = useState<DiscoveryResult>();
   const [selectedKeys, setSelectedKeys] = useState<readonly string[]>([]);
   const [error, setError] = useState<string>();
+  const [isLoading, setIsLoading] = useState(false);
   const text = copy[language];
   const plan = useMemo(() => problem.trim()
     ? providers.map((provider) => `${providerLabel(provider)} · ${problem.trim()}`)
@@ -46,6 +49,9 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
   async function runDiscovery(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault();
     setError(undefined);
+    setResult(undefined);
+    setSelectedKeys([]);
+    setIsLoading(true);
     try {
       setResult(await discover({
         problem,
@@ -55,9 +61,10 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
         mode: 'real',
         maxResults: 10,
       }));
-      setSelectedKeys([]);
     } catch {
       setError(text.failed);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -109,10 +116,13 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
             {providerLabel(provider)}
           </label>)}</div>
         </fieldset>
-        <button className="primary-action" type="submit" disabled={!problem.trim() || providers.length === 0}>{text.search}</button>
+        <button className="primary-action" type="submit" disabled={isLoading || !problem.trim() || providers.length === 0}>
+          {isLoading ? text.loading : text.search}
+        </button>
       </form>
-      <section className="results-panel" aria-live="polite">
-        {!result && <section className="empty-state"><h2>{text.plan}</h2>
+      <section className="results-panel" aria-live="polite" aria-busy={isLoading}>
+        {isLoading && <section className="loading-state" role="status"><span aria-hidden="true" />{text.loading}</section>}
+        {!result && !isLoading && !error && <section className="empty-state"><h2>{text.plan}</h2>
           {plan.length === 0 ? <p>{text.empty}</p> : <ol>{plan.map((item) => <li key={item}>{item}</li>)}</ol>}
         </section>}
         {error && <p className="error-message" role="alert">{error}</p>}

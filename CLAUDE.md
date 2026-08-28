@@ -10,6 +10,13 @@ cat error.log | fixseek --stdin --json
 fixseek --json --context-file ./fixseek-context.json
 ```
 
+When the sandbox cannot reach the host VPN/TUN network, use the host gateway
+described in [`docs/FIXSEEK_HOST_GATEWAY.md`](docs/FIXSEEK_HOST_GATEWAY.md).
+Before the first real search of a session, check its `/health` endpoint and ask
+the user for permission before starting the persistent loopback service if it
+is unavailable. Do not silently open the listener. Once authorized and healthy,
+reuse it without asking again until it stops.
+
 Real providers are the CLI default; `--mock` is only for tests and demos. Check
 every provider state, verify two independent sources when available, and do not
 equate a score with proof. The calling agent must infer the fix, propose an
@@ -72,8 +79,9 @@ Tests use Jest with `ts-jest`. Module mapping configured for `.js` → no extens
 Coverage thresholds: 80% lines, 70% branches.
 
 Run `npx playwright test e2e/solution-guide.spec.ts` for the local Web flow.
-`npm run lint` is currently blocked because the project has no ESLint
-configuration; do not treat it as a passing check.
+`npm run lint` checks the Node source, tests, Web source, and Playwright flow.
+Real-provider Web assertions allow up to 60 seconds because provider latency is
+external and the UI keeps a visible loading state during the request.
 
 ## Gotchas
 

@@ -21,7 +21,7 @@ module.exports = {
       testMatch: ['**/*.test.tsx'],
       moduleNameMapper,
       setupFilesAfterEnv: ['<rootDir>/web/src/test-setup.ts'],
-      globals: { 'ts-jest': { tsconfig: '<rootDir>/web/tsconfig.json' } },
+      transform: { '^.+\\.tsx?$': ['ts-jest', { tsconfig: '<rootDir>/web/tsconfig.json' }] },
     },
   ],
 };
