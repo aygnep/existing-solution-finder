@@ -96,7 +96,7 @@ function deduplicateByUrl(
   const seen = new Map<string, ScoredCandidate>();
 
   for (const candidate of candidates) {
-    const key = normalizeUrl(candidate.url);
+    const key = normalizeUrl(candidate.provider === 'npm' ? candidate.id : candidate.url);
     const existing = seen.get(key);
 
     if (!existing || candidate.score.displayTotal > existing.score.displayTotal) {
@@ -178,7 +178,7 @@ function buildMatchReason(candidate: ScoredCandidate): string {
   }
 
   if (breakdown.readmeEvidence >= 15) {
-    parts.push('README contains relevant usage examples');
+    parts.push('source text contains a matching error');
   }
 
   if (breakdown.installationClarity === 10) {
@@ -204,7 +204,6 @@ function buildNextStep(candidate: ScoredCandidate): string {
   if (candidate.nextStepHint) return candidate.nextStepHint;
 
   const type = resolveCandidateType(candidate);
-  const readme = (candidate.readmeSnippet ?? '').toLowerCase();
 
   if (type === 'issue') {
     return 'Read the issue thread for workarounds or subscribe for updates.';
@@ -214,19 +213,8 @@ function buildNextStep(candidate: ScoredCandidate): string {
     return 'Follow the workaround steps in the description, then verify with your stack.';
   }
 
-  // tool
-  if (readme.includes('npm install')) {
-    return `Run \`npm install ${candidate.name}\` and follow the README quickstart.`;
+  if (candidate.provider === 'web') {
+    return `Open ${candidate.url} and verify the source claim against your stack.`;
   }
-  if (readme.includes('go install')) {
-    return `Run \`go install\` per the README and configure per the example.`;
-  }
-  if (readme.includes('pip install')) {
-    return `Run \`pip install ${candidate.name}\` and configure per the README.`;
-  }
-  if (readme.includes('brew install')) {
-    return `Run \`brew install ${candidate.name}\` and configure per the README.`;
-  }
-
-  return `Review the README at ${candidate.url} and try the installation steps.`;
+  return `Review the documentation at ${candidate.url} and propose an isolated validation before installation.`;
 }

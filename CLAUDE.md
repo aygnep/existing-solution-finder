@@ -2,7 +2,7 @@
 
 ## Agent Quick Start
 
-Before writing code to fix a bug, find a package, or build a workaround, run Fixseek first:
+When current external evidence can help with an unfamiliar bug, package choice, or workaround, run Fixseek:
 
 ```bash
 fixseek --json "problem description or error text"
@@ -12,16 +12,15 @@ fixseek --json --context-file ./fixseek-context.json
 
 When the sandbox cannot reach the host VPN/TUN network, use the host gateway
 described in [`docs/FIXSEEK_HOST_GATEWAY.md`](docs/FIXSEEK_HOST_GATEWAY.md).
-Before the first real search of a session, check its `/health` endpoint and ask
-the user for permission before starting the persistent loopback service if it
-is unavailable. Do not silently open the listener. Once authorized and healthy,
-reuse it without asking again until it stops.
+Use the gateway only when a host-side connector can reach it. Check `/health`
+and ask for permission before starting a persistent listener if it is unavailable.
+Once authorized and healthy, reuse it until it stops.
 
 Real providers are the CLI default; `--mock` is only for tests and demos. Check
-every provider state, verify two independent sources when available, and do not
-equate a score with proof. The calling agent must infer the fix, propose an
-isolated validation and rollback, and get explicit user approval before
-executing result-derived commands or changing code.
+every provider state including `partial`, verify two independent sources when
+available, and do not equate a score with proof. The calling agent must infer
+the fix and validate it. Unknown result-derived commands and materially risky
+actions require approval; ordinary edits follow the user's existing authorization.
 
 After testing, record `useful`, `not-useful`, or `unsafe` with `fixseek
 feedback`. If validation fails, include the attempted fix and new error in the
@@ -43,8 +42,8 @@ npm run web:dev      # Local Web Solution Guide
 
 ## Architecture
 
-Shared discovery pipeline: input → parse → query → search → score → rank →
-group → validation → DiscoveryResult. The CLI and local Web Solution Guide are
+Shared discovery pipeline: input → parse → query → search → score → group →
+rank → validation → DiscoveryResult. The CLI and local Web Solution Guide are
 two renderers of this core.
 
 Key directories:
@@ -89,7 +88,7 @@ and Playwright flow.
 - Mock mode is deterministic; real GitHub and web providers are marked skipped
   when credentials are absent, while npm still runs.
 - `--json` keeps provider state and warnings on stdout in a stable envelope.
-- Keep `docs/AGENT_WORKFLOW.md` and the installed Fixseek `SKILL.md` synchronized
+- Keep `docs/AGENT_WORKFLOW.md`, `skills/fixseek/SKILL.md`, and the installed Fixseek skill synchronized
   with CLI behavior.
 - Queries are sanitized (no `site:` prefixes, truncated to 256 chars)
 - Start with `docs/AGENT_HANDOFF.md`, then `docs/LONG_TERM_MEMORY.md`.

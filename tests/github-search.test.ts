@@ -370,11 +370,11 @@ describe('searchGitHubIssues', () => {
       nextStepHint: 'Read the issue thread for confirmed workarounds, maintainer responses, and affected versions.',
       metadata: {
         repositoryUrl: 'https://github.com/owner/repo',
-        ownerType: 'user',
       },
     });
     expect(results[0].metadata.createdDate).toEqual(new Date('2026-04-01T00:00:00Z'));
-    expect(results[0].metadata.lastCommitDate).toEqual(new Date('2026-05-01T00:00:00Z'));
+    expect(results[0].metadata.lastCommitDate).toBeUndefined();
+    expect(results[0].metadata.ownerType).toBeUndefined();
   });
 
   it('propagates issue search rate limits', async () => {

@@ -3,7 +3,7 @@ import type { ParsedProblem } from './problem.js';
 import type { RankedCandidate } from './score.js';
 
 export type DiscoveryMode = 'mock' | 'real';
-export type ProviderState = 'pending' | 'complete' | 'empty' | 'skipped' | 'failed';
+export type ProviderState = 'pending' | 'complete' | 'partial' | 'empty' | 'skipped' | 'failed';
 
 export interface DiscoveryRequest {
   readonly problem: string;

@@ -8,7 +8,7 @@ CLI or local Web UI
 DiscoveryRequest
         ↓
 discovery-service
-parse → query plan → provider runs → score → rank → group → validation
+parse → query plan → provider runs → score → group keys → rank groups → evidence → validation
         ↓
 DiscoveryResult
   ├─ CLI summarizer
@@ -31,7 +31,7 @@ scoring or safety behavior.
 | Contract | src/types/discovery.ts | Request, plan, provider status, evidence, solution, and result types |
 | Orchestration | src/core/discovery-service.ts | Parse, query, isolated provider runs, score, rank, group, validation |
 | Trust | scorer.ts, ranker.ts | Deterministic fit, maintenance, safety penalties, order, explanation |
-| Evidence | solution-grouper.ts, validation-guidance.ts | Conservative canonical-URL grouping and non-executing validation |
+| Evidence | solution-grouper.ts, validation-guidance.ts | Group repository evidence before the result limit while keeping npm packages distinct; retain source evidence and non-executing validation |
 | Providers | src/providers/ | External I/O and mock or real provider factory |
 | Feedback | src/feedback/ | Problem fingerprints and redacted useful / not-useful / unsafe JSONL outcomes |
 | Web | src/web/gateway.ts, web/src/ | Local credential boundary and session-only React workflow |
@@ -42,9 +42,10 @@ scoring or safety behavior.
 The CLI defaults to real mode; mock mode is deterministic and explicit. Real
 mode uses GitHub when GITHUB_TOKEN exists, npm without a credential, and web
 search when WEB_SEARCH_API_KEY exists. Missing credentials produce `skipped`,
-legitimate zero results produce `empty`, and runtime problems produce `failed`.
+legitimate zero results produce `empty`, query-level failures with retained
+results produce `partial`, and full runtime failures produce `failed`.
 Provider requests have bounded retry, concurrency, and short-lived in-process
-caching; partial results from healthy providers survive.
+caching; successful queries survive failures in sibling queries.
 
 Agent JSON output retains the request, search plan, provider states, evidence,
 warnings, provider-native provenance, and validation steps. It does not make an

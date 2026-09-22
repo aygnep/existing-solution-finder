@@ -75,7 +75,7 @@ describe('Fixseek feedback CLI', () => {
     expect(code).toBe(0);
     expect(stderr.text()).toBe('');
     expect(JSON.parse(stdout.text())).toMatchObject({
-      schemaVersion: '1.0',
+      schemaVersion: '1.1',
       kind: 'fixseek.feedback',
       ok: true,
       invocation: {
@@ -201,7 +201,7 @@ describe('Fixseek feedback CLI', () => {
 
       expect(code).toBe(1);
       expect(JSON.parse(stdout.text())).toMatchObject({
-        schemaVersion: '1.0',
+        schemaVersion: '1.1',
         kind: 'fixseek.error',
         ok: false,
         error: { code: 'feedback_problem_input' },

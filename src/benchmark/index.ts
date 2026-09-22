@@ -108,12 +108,16 @@ function comparisonWithoutBaseline(report: BenchmarkRunReport): BenchmarkCompari
       reasons: ['At least one required provider did not complete with results.'],
     };
   }
+  const failed = report.cases.filter((benchmarkCase) => benchmarkCase.outcome === 'failed');
+  if (failed.length > 0) {
+    return { outcome: 'failed', reasons: failed.map((benchmarkCase) => `Quality target missed for "${benchmarkCase.id}".`) };
+  }
   return { outcome: 'passed', reasons: [] };
 }
 
 function exitCodeFor(comparison: BenchmarkComparison): number {
   if (comparison.outcome === 'passed') return 0;
-  return comparison.outcome === 'regressed' ? 2 : 3;
+  return comparison.outcome === 'regressed' || comparison.outcome === 'failed' ? 2 : 3;
 }
 
 function isMissingFile(error: unknown): error is NodeJS.ErrnoException {

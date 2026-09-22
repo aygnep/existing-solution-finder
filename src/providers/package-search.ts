@@ -161,7 +161,6 @@ function mapNpmResult(
     metadata: {
       repositoryUrl,
       license,
-      lastCommitDate: toValidDate(updatedAt),
       hasInstallInstructions: true,
     },
     providerEvidence: {
@@ -190,10 +189,4 @@ function normalizeRepository(
     .replace(/^git\+/, '')
     .replace(/^git:\/\//, 'https://')
     .replace(/\.git$/, '');
-}
-
-function toValidDate(value: string | undefined): Date | undefined {
-  if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
 }

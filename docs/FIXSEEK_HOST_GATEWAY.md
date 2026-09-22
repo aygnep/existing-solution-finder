@@ -54,7 +54,8 @@ Use `POST /api/discover` with a JSON body containing `problem`, `stack`,
 ```
 
 Always inspect `result.providerStatus`. `complete` means the provider returned
-results; `empty`, `skipped`, and `failed` must remain distinct. Never treat
+results from all queries; `partial` means some queries failed while successful
+results were retained. `empty`, `skipped`, and `failed` must remain distinct. Never treat
 `ok: true` alone as proof that a real search succeeded.
 
 ## Safety

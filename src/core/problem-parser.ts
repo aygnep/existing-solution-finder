@@ -143,11 +143,27 @@ function extractKeywords(text: string): readonly string[] {
     'not', 'no', 'can', 'will', 'would', 'could', 'should',
   ]);
 
-  const words = text
+  const latinWords = text
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
     .map((w) => w.toLowerCase())
     .filter((w) => w.length >= 3 && !stopWords.has(w));
+
+  const chineseStopWords = new Set(['如何', '怎么', '无法', '出现', '时候', '之后', '问题', '错误', '报错', '解决']);
+  const singleCharacterStopWords = new Set(['后', '前', '在', '和', '的', '了', '时', '中']);
+  const segments = [...new Intl.Segmenter('zh', { granularity: 'word' }).segment(text)]
+    .filter((part) => part.isWordLike && /\p{Script=Han}/u.test(part.segment))
+    .map((part) => part.segment.trim());
+  const chineseWords: string[] = [];
+  for (const [index, segment] of segments.entries()) {
+    if (segment.length >= 2 && !chineseStopWords.has(segment)) chineseWords.push(segment);
+    const next = segments[index + 1];
+    if (segment.length === 1 && next?.length === 1 && !singleCharacterStopWords.has(segment)) {
+      chineseWords.push(segment + next);
+    }
+  }
+
+  const words = [...latinWords, ...chineseWords];
 
   // Deduplicate preserving first occurrence
   const seen = new Set<string>();

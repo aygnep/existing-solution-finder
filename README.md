@@ -16,11 +16,40 @@ GitHub projects, GitHub issues, npm packages, workarounds, docs, and related
 tools. You still review the result; Fixseek helps you avoid missing the obvious
 existing fix before you build one yourself.
 
+### Built for AI coding agents
+
+An agent can call `fixseek --json` before choosing a dependency or writing a
+workaround. The response includes the generated queries, source URLs, ranked
+candidates, risk warnings, and a status for each provider. The agent can then
+open the original sources, compare versions with the current repository, and
+validate a proposed change. Fixseek does not ask an AI model to invent sources
+or execute commands found in search results.
+
+```bash
+fixseek --json --stack "Vite,Node.js" "module not found after pnpm install"
+```
+
+`complete`, `partial`, `empty`, `skipped`, and `failed` remain distinct in JSON.
+For example, `partial` keeps results from successful queries while showing that
+other queries failed. The agent JSON envelope is schema version `1.1`. See the [Codex skill](skills/fixseek/SKILL.md) for a
+reusable agent workflow.
+
+```mermaid
+flowchart LR
+    A[AI coding agent] -->|error and project context| F[Fixseek CLI]
+    F --> S[GitHub, npm, web search]
+    S -->|source URLs and provider status| A
+    A -->|verify sources and versions| V[Small project validation]
+```
+
 ## Installation
 
 ```bash
 npm install -g fixseek
 ```
+
+The npm registry currently serves the stable 0.1.0 release. The 0.2.0 beta
+changes in this repository can be built locally with `npm install && npm run build`.
 
 ## Quick Start
 
@@ -36,11 +65,11 @@ CLI searches real providers by default. npm needs only outbound network access;
 GitHub and web are used when their credentials are configured. `--mock` is only
 for deterministic tests and demos.
 
-When the calling environment cannot reach the host VPN/TUN network, run the
+When the calling environment cannot reach the host VPN/TUN network, use the
 host-only gateway described in
-[`docs/FIXSEEK_HOST_GATEWAY.md`](docs/FIXSEEK_HOST_GATEWAY.md). The first real
-search must request user authorization before starting the loopback listener;
-later searches may reuse a healthy gateway in the same session.
+[`docs/FIXSEEK_HOST_GATEWAY.md`](docs/FIXSEEK_HOST_GATEWAY.md) if a host-side
+connector can reach it. Check `/health` and request authorization before
+starting a persistent loopback listener; reuse a healthy listener afterward.
 
 ## Usage
 
@@ -136,11 +165,12 @@ Do not commit `.env` or real tokens.
 
 ## Coding-Agent Workflow
 
-Use `fixseek --json` before implementing an unfamiliar fix. Check every
+Use `fixseek --json` when external evidence can help with an unfamiliar fix. Check every
 provider state, verify at least two independent sources when available, and
 treat scores as retrieval signals rather than proof. The calling agent should
 infer the root cause, propose an isolated validation and rollback, and obtain
-user approval before executing result-derived commands or modifying code.
+approval before executing unknown result-derived commands or materially risky
+actions. Ordinary repository changes follow the user's existing authorization.
 
 ### Agent Skill Usage
 
@@ -150,7 +180,7 @@ normal request such as:
 > Use Fixseek to investigate this Vite module-resolution error before changing
 > the project.
 
-The skill is the orchestration and safety layer: it collects the error, stack,
+The [tracked skill file](skills/fixseek/SKILL.md) is the orchestration and safety layer: it collects the error, stack,
 versions, constraints, and attempted fixes; runs `fixseek --json`; checks every
 provider state; verifies source evidence; and reports a proposed validation and
 rollback. The Fixseek CLI remains the execution layer that performs the actual
@@ -172,7 +202,8 @@ fixseek feedback \
   --json
 ```
 
-Outcomes are `useful`, `not-useful`, or `unsafe`. If validation fails, add the
+Outcomes are `useful`, `not-useful`, or `unsafe`. They are stored locally and do
+not automatically change ranking. If validation fails, add the
 attempted fix and new error to a context file and search again. See
 [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md).
 
@@ -202,7 +233,9 @@ npm run benchmark:real
 ```
 
 The command calls real providers and prints a redacted JSON evaluation report.
-It exits with `2` for an evaluated quality regression and `3` when a required
+A conclusive relevance or safety miss fails the quality gate, including misses
+already present in the historical baseline. It exits with `2` for a failed
+quality target or regression and `3` when a required
 provider is unavailable, skipped, rate-limited, or fails. It never changes the
 approved snapshot.
 

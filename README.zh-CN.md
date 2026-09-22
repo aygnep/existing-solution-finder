@@ -10,6 +10,16 @@ Fixseek 是一个命令行工具。你给它一段错误日志、问题描述或
 
 它不是自动修复工具，也不会替你执行未知命令。它更像是一个“先查一下有没有人已经踩过坑”的搜索助手。
 
+### 给 AI 编程 Agent 使用
+
+Agent 可以在选依赖或写 workaround 前运行 `fixseek --json`。结果包含检索词、来源链接、候选方案、风险提示，以及每个 provider 的状态。Agent 再打开原始来源，核对版本和当前项目，并验证拟采用的修改。Fixseek 不让模型凭空编造来源，也不自动执行搜索结果中的命令。
+
+```bash
+fixseek --json --stack "Vite,Node.js" "pnpm 安装后模块找不到"
+```
+
+JSON 会区分 `complete`、`partial`、`empty`、`skipped` 和 `failed`；`partial` 表示保留了成功查询的结果，同时有其他查询失败。Agent JSON 封装版本为 `1.1`。可复用的说明见 [Codex Skill](skills/fixseek/SKILL.md)。
+
 ## 适合什么场景？
 
 - 遇到陌生报错，不想从零开始 debug。
@@ -24,6 +34,8 @@ Fixseek 是一个命令行工具。你给它一段错误日志、问题描述或
 ```bash
 npm install -g fixseek
 ```
+
+npm 仓库目前提供稳定版 0.1.0。本仓库中的 0.2.0 beta 改动可用 `npm install && npm run build` 在本地构建。
 
 ## 快速开始
 
@@ -119,10 +131,10 @@ Fixseek 依次读取当前目录的 `.env` 和 `~/.config/fixseek/.env`，已经
 
 ## Coding Agent 工作流
 
-对于真实工程问题，agent 应先运行 `fixseek --json`，检查每个 provider 的
-`complete`、`empty`、`skipped` 或 `failed` 状态，并在条件允许时核验至少
+当陌生问题能从外部证据获益时，agent 可先运行 `fixseek --json`，检查每个 provider 的
+`complete`、`partial`、`empty`、`skipped` 或 `failed` 状态，并在条件允许时核验至少
 两个独立来源。分数只是检索信号，不是修复已被证明有效。agent 仍需推导根因、
-提出隔离验证与回滚方案，并在执行候选命令或修改代码前取得用户授权。
+提出隔离验证与回滚方案。执行陌生候选命令或有实质风险的操作前应取得授权；用户已授权的常规代码修改可以继续进行。
 
 ### Agent Skill 使用方式
 
@@ -130,7 +142,7 @@ Fixseek 依次读取当前目录的 `.env` 和 `~/.config/fixseek/.env`，已经
 
 > 在修改项目之前，使用 Fixseek 调查这个 Vite 模块解析错误。
 
-Skill 是编排与安全约束层：它负责收集错误、技术栈、版本、限制条件和已尝试方案，
+仓库中的 [Skill 文件](skills/fixseek/SKILL.md) 是编排与安全约束层：它负责收集错误、技术栈、版本、限制条件和已尝试方案，
 调用 `fixseek --json`，检查每个 provider 的状态，核验来源证据，并给出验证与回滚
 建议。Fixseek CLI 才是真正执行搜索的入口。如果环境中没有安装 Skill，Agent 也
 可以直接调用 CLI，遵循相同工作流。
@@ -149,7 +161,7 @@ fixseek feedback \
   --json
 ```
 
-结果可选 `useful`、`not-useful` 或 `unsafe`。验证失败时，把已尝试方案和
+结果可选 `useful`、`not-useful` 或 `unsafe`。反馈保存在本地，目前不会自动参与排序。验证失败时，把已尝试方案和
 新错误加入 context file 后重新搜索。完整流程见
 [`docs/AGENT_WORKFLOW.md`](docs/AGENT_WORKFLOW.md)。
 

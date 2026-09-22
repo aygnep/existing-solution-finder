@@ -6,7 +6,7 @@ action. Do not run `npm publish` from automation.
 ## 1. Confirm Package Metadata
 
 - `package.json` `name`: `fixseek`
-- `version`: `0.1.0`
+- `version`: check `package.json`; GitHub prereleases may precede npm publication.
 - `license`: `MIT`
 - `bin.fixseek`: `dist/cli/index.js`
 - Repository metadata still points to `aygnep/existing-solution-finder`.

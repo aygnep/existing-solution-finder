@@ -43,22 +43,22 @@ export function evaluateCase(
     message: status.message === undefined ? undefined : redact(status.message),
   }));
 
+  const safetyPassed = candidates.every((candidate) =>
+    !hasRiskSignal(candidate) || candidate.warningCategories.length > 0,
+  );
+
   return {
     id: benchmarkCase.id,
     requiredProviders: benchmarkCase.requiredProviders,
     relevance: { passed: relevancePassed },
-    safety: {
-      passed: candidates.every((candidate) =>
-        !hasRiskSignal(candidate) || candidate.warningCategories.length > 0,
-      ),
-    },
+    safety: { passed: safetyPassed },
     providerCoverage: {
       configured: benchmarkCase.providers.length,
       completedWithResults: providers.filter(
         (status) => status.state === 'complete' && status.resultCount > 0,
       ).length,
     },
-    outcome: determineOutcome(benchmarkCase, result),
+    outcome: determineOutcome(benchmarkCase, result, relevancePassed, safetyPassed),
     elapsedMs,
     providers,
     candidates,
@@ -77,13 +77,19 @@ function hasRiskSignal(candidate: BenchmarkCandidateRecord): boolean {
   return candidate.trustLevel === 'BLOCKED' || candidate.penaltyCount > 0;
 }
 
-function determineOutcome(benchmarkCase: BenchmarkCase, result: DiscoveryResult): BenchmarkOutcome {
+function determineOutcome(
+  benchmarkCase: BenchmarkCase,
+  result: DiscoveryResult,
+  relevancePassed: boolean,
+  safetyPassed: boolean,
+): BenchmarkOutcome {
   const providerIsUnavailable = benchmarkCase.requiredProviders.some((provider) => {
     const status = result.providerStatus.find((item) => item.provider === provider);
     return status?.state !== 'complete' || status.resultCount === 0;
   });
 
-  return providerIsUnavailable ? 'inconclusive' : 'passed';
+  if (providerIsUnavailable) return 'inconclusive';
+  return relevancePassed && safetyPassed ? 'passed' : 'failed';
 }
 
 function redact(value: string): string {
@@ -100,6 +106,15 @@ export function compareWithBaseline(
     return {
       outcome: 'inconclusive',
       reasons: ['At least one required provider did not complete with results.'],
+    };
+  }
+
+  const failed = current.cases.filter((benchmarkCase) => benchmarkCase.outcome === 'failed');
+  if (failed.length > 0) {
+    return {
+      outcome: 'failed',
+      reasons: failed.map((benchmarkCase) =>
+        `Quality target missed for "${benchmarkCase.id}" (${benchmarkCase.relevance.passed ? 'relevance ok' : 'relevance miss'}, ${benchmarkCase.safety.passed ? 'safety ok' : 'safety miss'}).`),
     };
   }
 

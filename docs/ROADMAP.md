@@ -19,6 +19,12 @@ The P2 agent-first workflow is implemented:
 - Results include source evidence and a validation/rollback/re-search loop.
 - Local `useful`, `not-useful`, and `unsafe` outcome records are available.
 
+The search-quality beta also preserves source URLs in JSON output, generates
+queries for Chinese-only input, retains results from partially failed provider
+runs, and treats a conclusive benchmark relevance miss as a failed quality gate.
+The most recent real run passed 1 of 5 relevance cases, so ranking and benchmark
+case quality remain active release work.
+
 ## P3 Priorities
 
 ### 1. Improve measured real quality

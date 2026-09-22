@@ -132,7 +132,8 @@ function scoreReadmeEvidence(candidate: RawCandidate, problem: ParsedProblem): n
 }
 
 function scoreRecency(candidate: RawCandidate, nowMs: number): number {
-  const lastCommit = candidate.metadata.lastCommitDate;
+  const lastCommit = candidate.metadata.lastCommitDate ??
+    (candidate.provider === 'npm' ? toDate(candidate.providerEvidence?.updatedAt) : undefined);
   if (!lastCommit) return 3; // unknown; give benefit of doubt
 
   const ageMs = nowMs - lastCommit.getTime();
@@ -143,6 +144,7 @@ function scoreRecency(candidate: RawCandidate, nowMs: number): number {
 }
 
 function scoreInstallClarity(candidate: RawCandidate): number {
+  if (candidate.provider === 'web' || candidate.candidateTypeHint === 'issue') return 0;
   if (candidate.metadata.hasInstallInstructions === true) return 10;
   if (candidate.metadata.hasInstallInstructions === false) return 0;
 
@@ -159,6 +161,7 @@ function scoreInstallClarity(candidate: RawCandidate): number {
 }
 
 function scoreMaintenanceActivity(candidate: RawCandidate, nowMs: number): number {
+  if (candidate.provider === 'web' || candidate.candidateTypeHint === 'issue') return 0;
   const lastCommit = candidate.metadata.lastCommitDate;
   if (!lastCommit) return 3;
 
@@ -190,11 +193,12 @@ function computePenalties(candidate: RawCandidate, nowMs: number): readonly Pena
   const penalties: Penalty[] = [];
   const { metadata } = candidate;
 
-  if (!candidate.readmeSnippet || candidate.readmeSnippet.length < 20) {
+  if (candidate.provider !== 'web' && candidate.candidateTypeHint !== 'issue' &&
+    (!candidate.readmeSnippet || candidate.readmeSnippet.length < 20)) {
     penalties.push({ amount: -10, reason: 'No README' });
   }
 
-  if (!metadata.license) {
+  if (candidate.provider !== 'web' && candidate.candidateTypeHint !== 'issue' && !metadata.license) {
     penalties.push({ amount: -5, reason: 'No license file' });
   }
 
@@ -241,14 +245,16 @@ function buildWarnings(
     ? (nowMs - metadata.createdDate.getTime()) / (30 * 24 * 60 * 60 * 1000)
     : null;
 
-  if (ageMonths !== null && ageMonths < 6 && stars < 100) {
+  if (candidate.provider === 'github' && candidate.candidateTypeHint !== 'issue' &&
+    ageMonths !== null && ageMonths < 6 && stars < 100) {
     warnings.push({
       category: 'NEW_PROJECT',
       code: 'new-project',
       message: `Created ${Math.round(ageMonths)} months ago with only ${stars} stars. Not widely tested.`,
       params: { createdMonths: Math.round(ageMonths), stars },
     });
-  } else if (stars < 50 && metadata.ownerType === 'user') {
+  } else if (candidate.provider === 'github' && candidate.candidateTypeHint !== 'issue' &&
+    stars < 50 && metadata.ownerType === 'user') {
     warnings.push({
       category: 'LOW_STARS',
       code: 'low-stars',
@@ -273,15 +279,18 @@ function determineTrustLevel(candidate: RawCandidate, displayTotal: number): Tru
     return 'BLOCKED';
   }
 
-  if (metadata.ownerType === 'organization' && displayTotal >= 60 && metadata.license) {
-    return 'HIGH';
-  }
-
+  // An organization account alone does not establish official provenance.
   if (displayTotal >= 40 && metadata.license) {
     return 'MEDIUM';
   }
 
   return 'LOW';
+}
+
+function toDate(value: string | undefined): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
 // ─── Utility ──────────────────────────────────────────────────────────────────

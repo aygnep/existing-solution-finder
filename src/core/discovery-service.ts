@@ -2,7 +2,7 @@ import { generateQueries } from './query-generator.js';
 import { parseProblem } from './problem-parser.js';
 import { rankCandidates } from './ranker.js';
 import { scoreAndAttach } from './scorer.js';
-import { groupSolutions } from './solution-grouper.js';
+import { groupSolutions, solutionKeyFor } from './solution-grouper.js';
 import { redactSensitiveText } from '../feedback/redaction.js';
 import {
   buildDiscoveryRequest,
@@ -18,7 +18,13 @@ export interface SkippedProviderResult {
   readonly message: string;
 }
 
-export type ProviderSearchResult = readonly RawCandidate[] | SkippedProviderResult;
+export interface PartialProviderResult {
+  readonly raw: readonly RawCandidate[];
+  readonly state: 'partial';
+  readonly message: string;
+}
+
+export type ProviderSearchResult = readonly RawCandidate[] | SkippedProviderResult | PartialProviderResult;
 
 export interface DiscoverySearchers {
   readonly github: (queries: readonly Query[]) => Promise<ProviderSearchResult>;
@@ -45,12 +51,18 @@ export async function discoverSolutions(
   const runs = await Promise.all(request.providers.map((provider) =>
     runProvider(provider, queries.filter((query) => query.providers.includes(provider)), options.searchers),
   ));
-  const ranked = rankCandidates(
-    runs.flatMap((run) => run.raw).map((candidate) =>
-      scoreAndAttach(candidate, parsedProblem, options.now.getTime()),
-    ),
-    { maxResults: request.maxResults },
+  const scored = runs.flatMap((run) => run.raw).map((candidate) =>
+    scoreAndAttach(candidate, parsedProblem, options.now.getTime()),
   );
+  const membersBySolution = new Map<string, typeof scored>();
+  for (const candidate of scored) {
+    const key = solutionKeyFor(candidate);
+    membersBySolution.set(key, [...(membersBySolution.get(key) ?? []), candidate]);
+  }
+  const representatives = [...membersBySolution.values()].map((members) =>
+    rankCandidates(members, { maxResults: 1 })[0]!,
+  );
+  const ranked = rankCandidates(representatives, { maxResults: request.maxResults });
 
   return {
     request,
@@ -61,7 +73,7 @@ export async function discoverSolutions(
       providers: query.providers,
     })),
     providerStatus: runs.map(({ raw: _raw, ...status }) => status),
-    candidates: groupSolutions(ranked, options.now),
+    candidates: groupSolutions(ranked, options.now, scored),
     completedAt: options.now.toISOString(),
   };
 }
@@ -77,7 +89,10 @@ async function runProvider(
 
   try {
     const result = await searchers[provider](queries);
-    if (isSkippedResult(result)) {
+    if (isStatusResult(result)) {
+      if (result.state === 'partial') {
+        return { provider, state: 'partial', resultCount: result.raw.length, message: result.message, raw: result.raw };
+      }
       return { provider, state: 'skipped', resultCount: 0, message: result.message, raw: result.raw };
     }
     return {
@@ -91,8 +106,8 @@ async function runProvider(
   }
 }
 
-function isSkippedResult(result: ProviderSearchResult): result is SkippedProviderResult {
-  return typeof result === 'object' && result !== null && 'state' in result && result.state === 'skipped';
+function isStatusResult(result: ProviderSearchResult): result is SkippedProviderResult | PartialProviderResult {
+  return typeof result === 'object' && result !== null && 'state' in result;
 }
 
 function buildProblemText(request: DiscoveryRequest): string {

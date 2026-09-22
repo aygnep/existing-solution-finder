@@ -304,8 +304,7 @@ function mapIssue(issue: GitHubIssue): RawCandidate {
     metadata: {
       repositoryUrl: repositoryUrlFromApiUrl(issue.repository_url),
       createdDate: issue.created_at ? new Date(issue.created_at) : undefined,
-      lastCommitDate: issue.updated_at ? new Date(issue.updated_at) : undefined,
-      ownerType: issue.user.type === 'Organization' ? 'organization' : 'user',
+      // Issue activity and author type do not describe repository maintenance or ownership.
     },
   };
 }
