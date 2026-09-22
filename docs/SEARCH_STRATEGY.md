@@ -20,7 +20,7 @@ Target the verbatim error tokens extracted from the input. Best for finding GitH
 ### 2. Stack Compatibility Queries
 Target tool combinations and known integration pain points.
 
-**Template:** `"<tool_A>" "<tool_B>" (integration | proxy | compatible | wrapper)`
+**Template:** `"<tool_A>" "<tool_B>" compatibility`, or `proxy` when the input explicitly asks for a bridge, proxy, or adapter
 
 **Example:**
 ```
@@ -30,7 +30,7 @@ Target tool combinations and known integration pain points.
 ```
 
 ### 3. GitHub Repository Queries
-Target repositories that directly address the problem. Use `site:github.com` or GitHub's `repo:` and `topic:` filters.
+Target repositories that directly address the problem. Web queries may use `site:github.com`; the GitHub API adapter removes that prefix.
 
 **Template:** `site:github.com "<tool>" "<feature_keyword>"`
 
@@ -73,10 +73,12 @@ Claude Code custom provider workaround
 ## Query Generation Rules
 
 1. **Token extraction order:** exact error strings → tool names → version numbers → general keywords.
-2. **Max queries per problem:** 15 (3 per category). Beyond this, result quality degrades.
+2. **Max queries per problem:** 15 (3 per category). The implementation also segments Chinese text and uses broad keyword fallbacks when no known stack or exact error is found.
 3. **Deduplication:** identical queries must not be sent twice across providers.
-4. **Quotes:** always wrap multi-word tokens in quotes to avoid broad match noise.
-5. **Language hint:** append `typescript` or `go` or `python` only when the problem is clearly language-specific.
+4. **Quotes:** wrap multi-word tokens in quotes to avoid broad match noise.
+5. **Solution terms:** use `proxy` and `middleware` for bridge or adapter problems; do not inject them into unrelated compatibility searches.
+
+A provider may report `partial` when one query fails but other queries succeed. Retained results remain visible with the coverage gap.
 
 ---
 
@@ -92,39 +94,9 @@ Claude Code custom provider workaround
 
 ---
 
-## Example: Full Query Set
+## Inspect the Actual Query Set
 
-**Input:**
-```
-Claude Code + OpenCode Go + DeepSeek reasoning_content error
-```
-
-**Parsed tokens:**
-- Error tokens: `reasoning_content`
-- Tools: `Claude Code`, `OpenCode Go`, `DeepSeek`
-- Context: API proxy, LLM
-
-**Generated queries:**
-```
-# Category 1 – Exact Error
-"reasoning_content" "Claude Code"
-"reasoning_content" "DeepSeek"
-"reasoning_content" filter proxy
-
-# Category 2 – Stack Compat
-"OpenCode Go" "Claude Code" proxy
-"DeepSeek" "Anthropic" compatible proxy
-"DeepSeek" "Claude Code" integration
-
-# Category 3 – GitHub Repos
-site:github.com "Claude Code" "OpenAI compatible" proxy
-site:github.com DeepSeek "reasoning_content" strip
-
-# Category 4 – GitHub Issues
-site:github.com "reasoning_content" "Claude Code" issue
-site:github.com "OpenCode" "DeepSeek" issue
-
-# Category 5 – Alternatives
-OpenAI API proxy remove extra fields middleware
-LLM response transformer proxy typescript
-```
+Run `fixseek --json --mock "your problem"` and read `result.searchPlan`. The
+generator is deterministic, but the exact query set depends on extracted error
+tokens, known stack names, and Chinese or English keywords. The real mode uses
+the same plan and searches configured providers.

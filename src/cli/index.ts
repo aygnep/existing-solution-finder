@@ -85,7 +85,7 @@ export function createProgram(io: CliIo = defaultIo()): Command {
   program
     .name('fixseek')
     .description(DESCRIPTION)
-    .version('0.1.0')
+    .version('0.2.0-beta.1')
     .argument('[problem...]', 'Problem description, error message, or keywords')
     .allowExcessArguments(false)
     .showHelpAfterError()
@@ -386,8 +386,10 @@ function writeProviderWarnings(
   io: CliIo,
 ): void {
   for (const status of statuses) {
-    if (status.state !== 'skipped' && status.state !== 'failed') continue;
-    const label = status.state === 'skipped' ? t(lang, 'providerSkipped') : t(lang, 'providerFailed');
+    if (status.state !== 'skipped' && status.state !== 'failed' && status.state !== 'partial') continue;
+    const label = status.state === 'partial'
+      ? (lang === 'zh' ? '来源部分成功' : 'Provider partially completed')
+      : status.state === 'skipped' ? t(lang, 'providerSkipped') : t(lang, 'providerFailed');
     const detail = status.message ? ` ${status.message}` : '';
     io.stderr.write(`${label}: ${status.provider}.${detail}\n`);
   }

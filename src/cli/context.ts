@@ -102,8 +102,7 @@ export function redactSensitiveText(input: string): string {
       '$1[REDACTED]',
     )
     .replace(/([?&](?:api_?key|token|access_?token|secret|password)=)[^&#\s]+/gi, '$1[REDACTED]')
-    .replace(/(https?:\/\/)[^/@\s]+:[^/@\s]+@/gi, '$1[REDACTED]@')
-    .replace(/(?<![A-Za-z0-9])[A-Za-z0-9+/_=-]{32,}(?![A-Za-z0-9])/g, '[REDACTED]');
+    .replace(/(https?:\/\/)[^/@\s]+:[^/@\s]+@/gi, '$1[REDACTED]@');
 }
 
 export function sanitizeForOutput<T>(value: T): T {

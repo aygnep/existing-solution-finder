@@ -92,9 +92,7 @@ describe('searchPackages', () => {
         metadataStatus: 'complete',
       },
     });
-    expect(results[0]!.metadata.lastCommitDate).toEqual(
-      new Date('2026-07-20T00:00:00Z'),
-    );
+    expect(results[0]!.metadata.lastCommitDate).toBeUndefined();
   });
 
   it('degrades one package when its metadata fetch fails', async () => {

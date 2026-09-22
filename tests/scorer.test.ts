@@ -63,6 +63,36 @@ function makeCandidate(overrides: Partial<RawCandidate> = {}): RawCandidate {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('scoreCandidate', () => {
+  it('does not treat a web evidence page as an unlicensed project without a README', () => {
+    const score = scoreCandidate({
+      id: 'https://vite.dev/guide/troubleshooting',
+      name: 'Vite troubleshooting',
+      url: 'https://vite.dev/guide/troubleshooting',
+      description: 'Module resolution troubleshooting guidance',
+      provider: 'web',
+      metadata: {},
+    }, makeProblem());
+
+    expect(score.penalties).not.toEqual(expect.arrayContaining([
+      expect.objectContaining({ reason: 'No README' }),
+      expect.objectContaining({ reason: 'No license file' }),
+    ]));
+  });
+
+  it('does not label a newly opened issue as a new project', () => {
+    const score = scoreCandidate({
+      id: 'https://github.com/example/project/issues/1',
+      name: 'example/project#1',
+      url: 'https://github.com/example/project/issues/1',
+      description: 'Module resolution issue',
+      provider: 'github',
+      candidateTypeHint: 'issue',
+      metadata: { createdDate: new Date('2026-07-01T00:00:00Z') },
+    }, makeProblem(), new Date('2026-09-01T00:00:00Z').getTime());
+
+    expect(score.warnings.map((warning) => warning.category)).not.toContain('NEW_PROJECT');
+  });
+
   describe('exact error match (max 25)', () => {
     it('gives 25 when error token appears in name/description', () => {
       const problem = makeProblem({ errorTokens: ['reasoning_content'] });
@@ -344,7 +374,7 @@ describe('scoreCandidate', () => {
       expect(score.trustLevel).toBe('BLOCKED');
     });
 
-    it('HIGH for org-owned, well-scored, licensed project', () => {
+    it('does not mark an organization account as verified official provenance', () => {
       const candidate = makeCandidate({
         name: 'reasoning_content handler',
         description: 'Handles reasoning_content for Claude Code and DeepSeek',
@@ -357,7 +387,7 @@ describe('scoreCandidate', () => {
         },
       });
       const score = scoreCandidate(candidate, makeProblem());
-      expect(score.trustLevel).toBe('HIGH');
+      expect(score.trustLevel).toBe('MEDIUM');
     });
 
     it('LOW for no-license, low-score project', () => {

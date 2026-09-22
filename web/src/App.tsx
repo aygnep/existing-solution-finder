@@ -158,8 +158,8 @@ function providerLabel(provider: DiscoveryRequest['providers'][number]): string 
 }
 
 function providerState(state: string, language: Language): string {
-  const zh: Record<string, string> = { complete: '已完成', empty: '无结果', skipped: '已跳过', failed: '失败', pending: '等待中' };
-  const en: Record<string, string> = { complete: 'complete', empty: 'empty', skipped: 'skipped', failed: 'failed', pending: 'pending' };
+  const zh: Record<string, string> = { complete: '已完成', partial: '部分成功', empty: '无结果', skipped: '已跳过', failed: '失败', pending: '等待中' };
+  const en: Record<string, string> = { complete: 'complete', partial: 'partial', empty: 'empty', skipped: 'skipped', failed: 'failed', pending: 'pending' };
   return (language === 'zh' ? zh : en)[state] ?? state;
 }
 

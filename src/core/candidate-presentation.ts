@@ -11,7 +11,7 @@ export function formatMatchReason(candidate: RankedCandidate, language: Language
   else if (breakdown.exactErrorMatch >= 5) clauses.push(zh ? '提及相关错误类型' : 'Mentions related error class');
   if (breakdown.stackMatch >= 12) clauses.push(zh ? '明确支持该技术栈' : 'Explicitly supports the tech stack');
   else if (breakdown.stackMatch >= 5) clauses.push(zh ? '部分匹配该技术栈' : 'Partially matches the tech stack');
-  if (breakdown.readmeEvidence >= 15) clauses.push(zh ? 'README 包含相关使用示例' : 'README contains relevant usage examples');
+  if (breakdown.readmeEvidence >= 15) clauses.push(zh ? '来源文本提及相同错误' : 'Source text mentions the same error');
   if (breakdown.installationClarity === 10) clauses.push(zh ? '提供清晰的安装说明' : 'Clear install instructions available');
   if (clauses.length === 0) return zh
     ? `基于整体相关性匹配（评分：${candidate.score.displayTotal}）`
@@ -27,6 +27,9 @@ export function formatNextStep(candidate: RankedCandidate, language: Language): 
   if (candidate.candidateType === 'workaround') return zh
     ? '按照说明中的变通步骤操作，再结合你的技术栈进行验证。'
     : 'Follow the workaround steps in the description, then verify with your stack.';
+  if (candidate.provider === 'web') return zh
+    ? `打开 ${candidate.url}，核对来源说法是否适用于当前技术栈。`
+    : `Open ${candidate.url} and check whether the source claim applies to this stack.`;
   return zh
     ? `查看 ${candidate.url} 中的 README，并在隔离环境验证文档步骤。`
     : `Review the README at ${candidate.url} and verify the documented steps in an isolated environment.`;

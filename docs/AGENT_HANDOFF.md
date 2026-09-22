@@ -1,8 +1,15 @@
 # Agent Handoff — Short-Term Memory
 
-Updated: 2026-07-30
+Updated: 2026-09-23
 
 ## Current State
+
+- GitHub beta 0.2.0 adds Chinese query fallback, per-query partial provider
+  results, source-URL-safe JSON redaction, grouping before Top N with distinct
+  npm packages, and conservative trust labels. Agent JSON schema is 1.1.
+- The real benchmark now fails conclusively on relevance misses. The latest
+  explicit run passed 1 of 5 relevance cases; four misses remain open quality
+  targets. Do not describe the beta as having passed the real quality gate.
 
 - Agent-first P2 is complete and independently reviewed for release.
 - CLI and Web share discoverSolutions; do not recreate UI-only search behavior.
@@ -28,8 +35,8 @@ Updated: 2026-07-30
   and prints a redacted report without changing the snapshot.
 - `npm run benchmark:update` intentionally overwrites
   `benchmarks/baseline.json`; run it only after reviewing the report and diff.
-- The initial baseline records two relevance misses:
-  `deepseek-opencode-bridge` and `esm-commonjs-vite`.
+- The historical baseline records two relevance misses. A September real run
+  showed four misses; keep the current report separate from the old snapshot.
 - Web search supports both Brave and SerpApi.
 
 ## Competitive Findings
@@ -55,7 +62,7 @@ integration into developer workflows rather than a one-off result list.
 
 ## Verification
 
-- `npm test -- --runInBand`: 26 suites and 228 tests passed.
+- `npm test -- --runInBand --silent`: 26 suites and 238 tests passed.
 - `npm run typecheck`: passed.
 - `npm run build`: passed, including the Web bundle.
 - `npm run lint`: passed.

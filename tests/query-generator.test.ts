@@ -114,6 +114,21 @@ describe('generateQueries', () => {
   });
 
   describe('edge cases', () => {
+    it('searches a Chinese-only problem without a known stack name', () => {
+      const problem = parseProblem('安装依赖后构建失败，模块解析错误');
+      const queries = generateQueries(problem);
+
+      expect(problem.keywords).toContain('构建');
+      expect(queries.length).toBeGreaterThan(0);
+      expect(queries.some((query) => query.providers.includes('npm'))).toBe(true);
+      expect(queries.some((query) => query.text.includes('构建'))).toBe(true);
+    });
+
+    it('does not force proxy terminology into an unrelated compatibility problem', () => {
+      const queries = generateQueries(parseProblem('Vite Node.js ESM CommonJS error'));
+      expect(queries.every((query) => !/proxy|middleware/.test(query.text))).toBe(true);
+    });
+
     it('generates queries from empty problem', () => {
       const problem = parseProblem('');
       const queries = generateQueries(problem);

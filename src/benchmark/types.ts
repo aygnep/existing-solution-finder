@@ -19,7 +19,7 @@ export interface BenchmarkCase {
   readonly approvedCandidates: readonly ApprovedCandidateMatcher[];
 }
 
-export type BenchmarkOutcome = 'passed' | 'regressed' | 'inconclusive';
+export type BenchmarkOutcome = 'passed' | 'failed' | 'inconclusive';
 
 export interface BenchmarkProviderRecord {
   readonly provider: Provider;
@@ -58,6 +58,6 @@ export interface BenchmarkRunReport {
 }
 
 export interface BenchmarkComparison {
-  readonly outcome: BenchmarkOutcome;
+  readonly outcome: BenchmarkOutcome | 'regressed';
   readonly reasons: readonly string[];
 }

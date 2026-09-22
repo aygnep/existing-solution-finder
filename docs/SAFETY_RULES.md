@@ -51,12 +51,14 @@ For each candidate, the system should surface:
 
 | Level | Label | Criteria |
 |---|---|---|
-| HIGH | ✅ Trusted | Official project of a recognized org, active, licensed, documented |
+| HIGH | ✅ Trusted | Verified official project of a recognized org, active, licensed, documented; not assigned automatically yet |
 | MEDIUM | 🔶 Unverified | Community project, active, has license and README |
 | LOW | ⚠️ Caution | New, few stars, no license, or inactive |
 | BLOCKED | 🚫 Risky | Archived, suspicious install, secrets exposure |
 
 The trust level appears next to each candidate in output. It is **informational only** — the system does not refuse to show BLOCKED candidates, but must always display the reason.
+
+Organization ownership by itself is not official provenance. Web pages and issues are not penalized for lacking a project README or license; their claims still need source verification.
 
 ---
 

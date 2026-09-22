@@ -52,6 +52,7 @@ function generateExactErrorQueries(problem: ParsedProblem): Query[] {
 function generateStackCompatQueries(problem: ParsedProblem): Query[] {
   const providers: Provider[] = ['github', 'web'];
   const queries: Query[] = [];
+  const integrationTerm = needsBridge(problem) ? 'proxy' : 'compatibility';
 
   const tools = problem.stackNames;
 
@@ -60,7 +61,7 @@ function generateStackCompatQueries(problem: ParsedProblem): Query[] {
     for (let j = i + 1; j < tools.length && queries.length < MAX_PER_CATEGORY; j++) {
       queries.push(
         makeQuery(
-          `${quote(tools[i])} ${quote(tools[j])} proxy`,
+          `${quote(tools[i])} ${quote(tools[j])} ${integrationTerm}`,
           'stack-compatibility',
           providers,
         ),
@@ -103,7 +104,9 @@ function generateGitHubRepoQueries(problem: ParsedProblem): Query[] {
   if (firstTool) {
     queries.push(
       makeQuery(
-        `site:github.com ${quote(firstTool)} proxy workaround`,
+        needsBridge(problem)
+          ? `site:github.com ${quote(firstTool)} proxy workaround`
+          : `site:github.com ${quote(firstTool)} ${problem.keywords.slice(0, 2).join(' ')}`.trim(),
         'github-repos',
         providers,
       ),
@@ -118,6 +121,14 @@ function generateGitHubRepoQueries(problem: ParsedProblem): Query[] {
         providers,
       ),
     );
+  }
+
+  if (queries.length === 0 && problem.keywords.length > 0) {
+    queries.push(makeQuery(
+      `site:github.com ${problem.keywords.slice(0, 5).join(' ')}`,
+      'github-repos',
+      providers,
+    ));
   }
 
   return queries.slice(0, MAX_PER_CATEGORY);
@@ -159,6 +170,14 @@ function generateGitHubIssueQueries(problem: ParsedProblem): Query[] {
     );
   }
 
+  if (queries.length === 0 && problem.keywords.length > 0) {
+    queries.push(makeQuery(
+      `site:github.com ${problem.keywords.slice(0, 5).join(' ')} issue`,
+      'github-issues',
+      providers,
+    ));
+  }
+
   return queries.slice(0, MAX_PER_CATEGORY);
 }
 
@@ -167,16 +186,24 @@ function generateAlternativeQueries(problem: ParsedProblem): Query[] {
   const queries: Query[] = [];
 
   // Keyword-based broad search
-  const keywords = problem.keywords.slice(0, 3).join(' ');
+  const keywords = problem.keywords.slice(0, 5).join(' ');
   if (keywords) {
-    queries.push(makeQuery(`${keywords} alternative`, 'alternatives', providers));
+    queries.push(makeQuery(
+      problem.stackNames.length === 0 && !/\p{Script=Han}/u.test(problem.raw)
+        ? `${keywords} alternative`
+        : keywords,
+      'alternatives',
+      providers,
+    ));
   }
 
-  // If there's a first tool, look for wrappers/alternatives
+  // Include the first tool without assuming a particular solution shape.
   if (problem.stackNames[0]) {
     queries.push(
       makeQuery(
-        `${quote(problem.stackNames[0])} workaround middleware`,
+        needsBridge(problem)
+          ? `${quote(problem.stackNames[0])} workaround middleware`
+          : `${quote(problem.stackNames[0])} ${problem.keywords.slice(0, 2).join(' ')}`.trim(),
         'alternatives',
         providers,
       ),
@@ -203,4 +230,8 @@ function quote(term: string): string {
 
 function makeQuery(text: string, category: QueryCategory, providers: readonly Provider[]): Query {
   return { text, category, providers };
+}
+
+function needsBridge(problem: ParsedProblem): boolean {
+  return /\b(proxy|bridge|adapter|middleware)\b|代理|桥接|适配/u.test(problem.raw.toLowerCase());
 }

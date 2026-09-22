@@ -5,7 +5,7 @@ import type { OutcomeRecord } from '../types/feedback.js';
 import { redactSensitiveText } from '../feedback/redaction.js';
 import { sanitizeForOutput } from './context.js';
 
-export const AGENT_SCHEMA_VERSION = '1.0' as const;
+export const AGENT_SCHEMA_VERSION = '1.1' as const;
 
 export interface AgentInvocationMetadata {
   readonly command: 'solve';
@@ -28,9 +28,9 @@ export interface AgentInvocationMetadata {
 }
 
 export interface AgentProviderWarning {
-  readonly code: 'provider_skipped' | 'provider_failed';
+  readonly code: 'provider_skipped' | 'provider_failed' | 'provider_partial';
   readonly provider: Provider;
-  readonly state: 'skipped' | 'failed';
+  readonly state: 'skipped' | 'failed' | 'partial';
   readonly message?: string;
 }
 
@@ -119,9 +119,9 @@ export function createFeedbackEnvelope(
 
 function providerWarnings(statuses: readonly ProviderStatus[]): readonly AgentProviderWarning[] {
   return statuses.flatMap((status) => {
-    if (status.state !== 'skipped' && status.state !== 'failed') return [];
+    if (status.state !== 'skipped' && status.state !== 'failed' && status.state !== 'partial') return [];
     return [{
-      code: status.state === 'skipped' ? 'provider_skipped' : 'provider_failed',
+      code: status.state === 'skipped' ? 'provider_skipped' : status.state === 'partial' ? 'provider_partial' : 'provider_failed',
       provider: status.provider,
       state: status.state,
       ...(status.message ? { message: status.message } : {}),

@@ -67,6 +67,13 @@ describe('evaluateCase', () => {
     })), 20);
 
     expect(report.safety.passed).toBe(false);
+    expect(report.outcome).toBe('failed');
+  });
+
+  it('fails a conclusive search that misses the approved top candidate', () => {
+    const report = evaluateCase(benchmarkCase, resultWith(candidate({ name: 'unrelated' })), 20);
+    expect(report.relevance.passed).toBe(false);
+    expect(report.outcome).toBe('failed');
   });
 });
 
@@ -83,6 +90,12 @@ describe('compareWithBaseline', () => {
     const current = runReport({ outcome: 'inconclusive' });
 
     expect(compareWithBaseline(current, baseline).outcome).toBe('inconclusive');
+  });
+
+  it('does not pass an existing relevance miss just because the baseline also missed', () => {
+    const baseline = runReport({ relevance: { passed: false }, outcome: 'passed' });
+    const current = runReport({ relevance: { passed: false }, outcome: 'failed' });
+    expect(compareWithBaseline(current, baseline).outcome).toBe('failed');
   });
 
   it('does not fail when a run finds an additional candidate', () => {

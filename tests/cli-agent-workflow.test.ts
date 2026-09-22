@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PassThrough, Writable } from 'node:stream';
 import { createProgram, runSolve, type CliIo } from '../src/cli/index';
+import { sanitizeForOutput } from '../src/cli/context';
 import { resetProviderRuntimeForTests } from '../src/providers/provider-runtime';
 
 class CaptureStream extends Writable {
@@ -107,7 +108,7 @@ describe('Fixseek agent-first CLI workflow', () => {
 
     expect(code).toBe(1);
     expect(JSON.parse(stdout.text())).toMatchObject({
-      schemaVersion: '1.0',
+      schemaVersion: '1.1',
       kind: 'fixseek.error',
       ok: false,
       error: { code: 'conflicting_modes' },
@@ -132,7 +133,7 @@ describe('Fixseek agent-first CLI workflow', () => {
     expect(code).toBe(0);
     const envelope = JSON.parse(stdout.text());
     expect(envelope).toMatchObject({
-      schemaVersion: '1.0',
+      schemaVersion: '1.1',
       kind: 'fixseek.discovery',
       ok: true,
       invocation: {
@@ -260,6 +261,25 @@ describe('Fixseek agent-first CLI workflow', () => {
     });
     expect(rawOutput).not.toContain('supersecret');
     expect(rawOutput).not.toContain('must-not-appear');
+  });
+
+  it('preserves long source URLs in agent JSON', async () => {
+    const longUrl = 'https://github.com/olivernn/lunr-languages/tree/master/lunr.zh.js';
+    expect(sanitizeForOutput({ sourceUrl: longUrl }).sourceUrl).toBe(longUrl);
+    const { io, stdout } = makeIo();
+    const code = await runSolve(
+      ['Claude Code DeepSeek reasoning_content error'],
+      { mock: true, json: true, maxResults: '10', logLevel: 'warn', lang: 'en' },
+      io,
+    );
+
+    expect(code).toBe(0);
+    const envelope = JSON.parse(stdout.text());
+    for (const candidate of envelope.result.candidates) {
+      expect(candidate.url).not.toContain('[REDACTED]');
+      expect(candidate.evidence.every((item: { sourceUrl: string }) =>
+        !item.sourceUrl.includes('[REDACTED]'))).toBe(true);
+    }
   });
 
   it('uses context problem as a fallback and rejects malformed context files', async () => {
