@@ -1,4 +1,4 @@
-import { createJevReranker } from '../src/providers/jev-reranker';
+import { createJevReranker, createLayaReranker } from '../src/providers/system-one-reranker';
 import type { SolutionCandidate } from '../src/types/discovery';
 import type { Env } from '../src/utils/env';
 
@@ -91,5 +91,49 @@ describe('Jev reranker adapter', () => {
 
     await expect(reranker.evaluate({ problem: 'module error', stack: [], constraints: [], candidates: [candidate] }))
       .rejects.toThrow('Jev authentication failed.');
+  });
+});
+
+describe('Laya local reranker adapter', () => {
+  it('uses the loopback Jev-compatible API without an external key', async () => {
+    const fetchImpl = jest.fn(async (url: string) => {
+      if (url.endsWith('/health')) return new Response(JSON.stringify({ status: 'ok' }), { status: 200 });
+      return new Response(JSON.stringify({
+        model: 'laya-rl-agent', routing: { model: 'multilingual' },
+        answers: {
+          relevant: { type: 'noul', noul: 0.61 },
+          compatible: { type: 'noul', noul: 0.77 },
+          evidence: { type: 'noul', noul: 0.58 },
+        },
+      }), { status: 200 });
+    }) as unknown as typeof fetch;
+    const reranker = createLayaReranker({ ...env, TYPESAFE_API_KEY: undefined, LAYA_PORT: 8766 }, { fetchImpl });
+    const result = await reranker.evaluate({
+      problem: '中文问题'.repeat(300), stack: ['Vite'], constraints: [],
+      candidates: [{ ...candidate, evidence: [{ ...candidate.evidence[0]!, excerpt: '证据'.repeat(400) }] }],
+    });
+
+    expect(result.model).toBe('laya/multilingual');
+    expect(result.judgments[0]).toMatchObject({ relevanceProbability: 0.61, compatibilityProbability: 0.77 });
+    const calls = (fetchImpl as jest.Mock).mock.calls as [string, RequestInit][];
+    expect(calls.map(([url]) => url)).toEqual([
+      'http://127.0.0.1:8766/health',
+      'http://127.0.0.1:8766/v1/systemone',
+    ]);
+    const request = calls[1]![1];
+    expect(request.headers).not.toHaveProperty('Authorization');
+    const body = JSON.parse(String(request.body));
+    expect(body).not.toHaveProperty('model');
+    expect(body.state.problem.length).toBeLessThanOrEqual(500);
+    expect(body.state.candidate.evidence[0].excerpt.length).toBeLessThanOrEqual(250);
+  });
+
+  it('fails before sending candidates when the local service is unavailable', async () => {
+    const fetchImpl = jest.fn(async () => { throw new Error('connection refused'); }) as unknown as typeof fetch;
+    const reranker = createLayaReranker(env, { fetchImpl });
+
+    await expect(reranker.evaluate({ problem: 'module error', stack: [], constraints: [], candidates: [candidate] }))
+      .rejects.toThrow('Laya local server is unavailable.');
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });

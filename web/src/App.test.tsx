@@ -59,10 +59,22 @@ describe('Solution Guide', () => {
     render(<App discover={discover} />);
 
     fireEvent.change(screen.getByLabelText('Describe the problem'), { target: { value: 'Vite cannot find module' } });
-    fireEvent.click(screen.getByLabelText('Use Jev to rerank the handoff'));
+    fireEvent.change(screen.getByLabelText('Handoff ranking'), { target: { value: 'jev' } });
     fireEvent.click(screen.getByRole('button', { name: 'Search solutions' }));
 
     await waitFor(() => expect(discover).toHaveBeenCalledWith(expect.objectContaining({ reranker: 'jev' })));
+  });
+
+  it('selects the local Laya backend separately from hosted Jev', async () => {
+    const discover = jest.fn().mockResolvedValue(result);
+    render(<App discover={discover} />);
+
+    fireEvent.change(screen.getByLabelText('Describe the problem'), { target: { value: 'Vite cannot find module' } });
+    fireEvent.change(screen.getByLabelText('Handoff ranking'), { target: { value: 'laya' } });
+    expect(screen.getByText(/remain on this computer/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Search solutions' }));
+
+    await waitFor(() => expect(discover).toHaveBeenCalledWith(expect.objectContaining({ reranker: 'laya' })));
   });
 
   it('switches system-generated result text to Chinese without another discovery request', async () => {

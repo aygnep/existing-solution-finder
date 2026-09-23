@@ -6,7 +6,7 @@ import { logger } from '../utils/logger.js';
 import { discoverSolutions } from '../core/discovery-service.js';
 import { summarize } from '../core/summarizer.js';
 import { createDiscoverySearchers } from '../providers/discovery-searchers.js';
-import { createJevReranker } from '../providers/jev-reranker.js';
+import { createJevReranker, createLayaReranker } from '../providers/system-one-reranker.js';
 import { loadEnv } from '../utils/env.js';
 import {
   appendOutcome,
@@ -88,7 +88,7 @@ export function createProgram(io: CliIo = defaultIo()): Command {
   program
     .name('fixseek')
     .description(DESCRIPTION)
-    .version('0.3.0-beta.1')
+    .version('0.4.0-beta.1')
     .argument('[problem...]', 'Problem description, error message, or keywords')
     .allowExcessArguments(false)
     .showHelpAfterError()
@@ -208,8 +208,8 @@ export async function runSolve(
 
   const mode = resolvedOptions.mock ? 'mock' : 'real';
   const rerankerName = resolvedOptions.reranker?.toLowerCase() ?? 'none';
-  if (rerankerName !== 'none' && rerankerName !== 'jev') {
-    return writeCliError('unsupported_reranker', '--reranker must be none or jev.', resolvedOptions, io);
+  if (rerankerName !== 'none' && rerankerName !== 'jev' && rerankerName !== 'laya') {
+    return writeCliError('unsupported_reranker', '--reranker must be none, jev, or laya.', resolvedOptions, io);
   }
 
   let selectedProvider: Provider | undefined;
@@ -243,8 +243,10 @@ export async function runSolve(
   const providers = selectedProvider ? [selectedProvider] : VALID_PROVIDERS;
   logger.info('Analyzing problem...', { length: context.problem.length });
   const searchers = await createDiscoverySearchers(mode);
-  const reranker = rerankerName === 'jev' && mode === 'real'
-    ? createJevReranker(loadEnv()) : undefined;
+  const reranker = mode === 'real'
+    ? rerankerName === 'jev' ? createJevReranker(loadEnv())
+      : rerankerName === 'laya' ? createLayaReranker(loadEnv()) : undefined
+    : undefined;
   const result = await discoverSolutions({
     request: {
       problem: context.problem,
@@ -253,7 +255,7 @@ export async function runSolve(
       providers,
       mode,
       maxResults,
-      ...(rerankerName === 'jev' ? { reranker: 'jev' as const } : {}),
+      ...(rerankerName === 'none' ? {} : { reranker: rerankerName }),
     },
     now: new Date(),
     searchers,
@@ -287,10 +289,10 @@ export async function runSolve(
 
   writeProviderWarnings(result.providerStatus, lang, io);
   io.stdout.write(summarize(result.candidates, result.parsedProblem, { lang }));
-  if (rerankerName === 'jev') {
-    io.stdout.write(`\nJev: ${result.reranking?.state ?? 'skipped'}${result.reranking?.message ? ` — ${result.reranking.message}` : ''}\n`);
+  if (rerankerName !== 'none') {
+    io.stdout.write(`\n${rerankerName}: ${result.reranking?.state ?? 'skipped'}${result.reranking?.message ? ` — ${result.reranking.message}` : ''}\n`);
     for (const item of result.handoff ?? []) {
-      io.stdout.write(`  Handoff: ${item.name}${item.jev ? ` (Jev relevance ${item.jev.relevanceProbability.toFixed(2)}, compatibility ${item.jev.compatibilityProbability.toFixed(2)})` : ''} — ${item.url}\n`);
+      io.stdout.write(`  Handoff: ${item.name}${item.decision ? ` (${item.decision.provider} relevance ${item.decision.relevanceProbability.toFixed(2)}, compatibility ${item.decision.compatibilityProbability.toFixed(2)})` : ''} — ${item.url}\n`);
     }
   }
   return 0;
@@ -420,7 +422,7 @@ function addSolveOptions(command: Command): void {
     .option('--mock', 'Use mock providers for tests and demos (no API calls)')
     .option('--real', 'Explicitly use real providers (accepted for compatibility; this is the default)')
     .option('--provider <name>', 'Limit to a provider: github | web | npm')
-    .option('--reranker <name>', 'Optional handoff reranker: none | jev (requires TYPESAFE_API_KEY)')
+    .option('--reranker <name>', 'Optional handoff reranker: none | jev | laya')
     .option('--stack <list>', 'Comma-separated stack context, e.g. "Node.js,Docker"')
     .option('--constraints <list>', 'Comma-separated constraints, e.g. "open source,no cloud"')
     .option('--context-file <path>', 'Read agent context from a JSON file')
@@ -440,6 +442,7 @@ Examples:
   cat error.log | fixseek --stdin
   fixseek --json "vite module not found"
   fixseek --json --reranker jev "vite module not found"
+  fixseek --json --reranker laya "vite module not found"  # requires a local Laya server
   fixseek feedback --problem "vite error" --candidate-url https://example.com/fix --outcome useful
   fixseek --lang zh "reasoning_content 报错"
   fixseek --max-results 5 "npm package ESM CommonJS error"

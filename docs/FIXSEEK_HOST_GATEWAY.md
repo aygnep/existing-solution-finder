@@ -41,7 +41,8 @@ curl --fail http://127.0.0.1:4174/health
 
 Use `POST /api/discover` with a JSON body containing `problem`, `stack`,
 `constraints`, `providers`, `mode`, and `maxResults`. Add `"reranker": "jev"`
-only when the user opts in and the host has `TYPESAFE_API_KEY` configured:
+only when the user opts in and the host has `TYPESAFE_API_KEY` configured;
+`"reranker": "laya"` uses the host's loopback Laya service instead:
 
 ```json
 {

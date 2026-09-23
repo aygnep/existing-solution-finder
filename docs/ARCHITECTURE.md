@@ -9,7 +9,8 @@ DiscoveryRequest
         ↓
 discovery-service
 parse → query plan → provider runs → score → group keys → rule shortlist
-  → optional Jev Noul rerank → final candidates and short handoff
+  → optional System One Noul rerank (hosted Jev or local Laya)
+  → final candidates and short handoff
         ↓
 DiscoveryResult
   ├─ CLI summarizer
@@ -34,7 +35,7 @@ scoring or safety behavior.
 | Trust | scorer.ts, ranker.ts | Deterministic fit, maintenance, safety penalties, order, explanation |
 | Evidence | solution-grouper.ts, validation-guidance.ts | Group repository evidence before the result limit while keeping npm packages distinct; retain source evidence and non-executing validation |
 | Providers | src/providers/ | External I/O and mock or real provider factory |
-| Jev | src/providers/jev-reranker.ts | Optional TypeSafe HTTP calls over bounded, redacted candidate evidence |
+| Decision rerankers | src/providers/system-one-reranker.ts | Optional TypeSafe or loopback Laya HTTP calls over bounded, redacted candidate evidence |
 | Feedback | src/feedback/ | Problem fingerprints and redacted useful / not-useful / unsafe JSONL outcomes |
 | Web | src/web/gateway.ts, web/src/ | Local credential boundary and session-only React workflow |
 | Exports | src/exports/solution-report.ts | Sourced report and agent-skill draft |
@@ -61,6 +62,13 @@ non-blocked candidates form the agent handoff. If Jev is unavailable or any
 response is invalid, the entire rerank falls back to rule order. The browser
 never receives `TYPESAFE_API_KEY`; opt-in sends the problem and bounded source
 text to TypeSafe AI from the CLI or loopback gateway.
+
+Laya is a separate opt-in with the same question and response shape. Fixseek
+connects only to `127.0.0.1:8766` by default and sends a shorter state for
+Laya's smaller context window. Laya's Router selects English or multilingual
+weights. Its output is labeled `decision.provider: laya`; the agent JSON schema
+is 1.3. The handoff preserves the first non-blocked rule candidate, then takes
+Laya-ranked candidates. A stopped or invalid local service falls back to rules.
 
 ## Outcome Feedback
 

@@ -5,7 +5,7 @@ import type { OutcomeRecord } from '../types/feedback.js';
 import { redactSensitiveText } from '../feedback/redaction.js';
 import { sanitizeForOutput } from './context.js';
 
-export const AGENT_SCHEMA_VERSION = '1.2' as const;
+export const AGENT_SCHEMA_VERSION = '1.3' as const;
 
 export interface AgentInvocationMetadata {
   readonly command: 'solve';
@@ -14,7 +14,7 @@ export interface AgentInvocationMetadata {
   readonly language: Language;
   readonly providers: readonly Provider[];
   readonly maxResults: number;
-  readonly reranker: 'none' | 'jev';
+  readonly reranker: 'none' | 'jev' | 'laya';
   readonly input: {
     readonly source: 'arguments' | 'stdin' | 'context-file';
     readonly contextFileLoaded: boolean;

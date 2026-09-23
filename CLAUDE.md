@@ -25,6 +25,10 @@ actions require approval; ordinary edits follow the user's existing authorizatio
 Jev reranking is opt-in with `--reranker jev` and requires `TYPESAFE_API_KEY`.
 Read `result.reranking` and `result.handoff`; a skipped or failed rerank uses
 the rule order. Jev probabilities are relevance signals, not validation.
+Local Laya is a separate opt-in with `--reranker laya`; see
+`docs/LAYA_LOCAL.md`. It requires a loopback service, no TypeSafe key, and uses
+a rule-leader anchor because the initial real comparison did not show a clear
+quality gain.
 
 After testing, record `useful`, `not-useful`, or `unsafe` with `fixseek
 feedback`. If validation fails, include the attempted fix and new error in the
@@ -47,7 +51,7 @@ npm run web:dev      # Local Web Solution Guide
 ## Architecture
 
 Shared discovery pipeline: input → parse → query → search → score → group →
-rule shortlist → optional Jev rerank → handoff → DiscoveryResult. The CLI and local Web Solution Guide are
+rule shortlist → optional Jev or Laya rerank → handoff → DiscoveryResult. The CLI and local Web Solution Guide are
 two renderers of this core.
 
 Key directories:

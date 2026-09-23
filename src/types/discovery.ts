@@ -4,6 +4,7 @@ import type { RankedCandidate } from './score.js';
 
 export type DiscoveryMode = 'mock' | 'real';
 export type ProviderState = 'pending' | 'complete' | 'partial' | 'empty' | 'skipped' | 'failed';
+export type RerankerProvider = 'jev' | 'laya';
 
 export interface DiscoveryRequest {
   readonly problem: string;
@@ -13,10 +14,12 @@ export interface DiscoveryRequest {
   readonly mode: DiscoveryMode;
   readonly maxResults: number;
   /** Optional external semantic reranker. Omission keeps the local rules-only flow. */
-  readonly reranker?: 'jev';
+  readonly reranker?: RerankerProvider;
 }
 
-export interface JevJudgment {
+export interface DecisionJudgment {
+  readonly provider: RerankerProvider;
+  readonly model: string;
   /** Probability that the candidate addresses the stated problem. */
   readonly relevanceProbability: number;
   /** Probability that the candidate fits stated stack and constraints. */
@@ -28,7 +31,8 @@ export interface JevJudgment {
 
 export interface RerankingStatus {
   readonly state: 'disabled' | 'complete' | 'skipped' | 'failed';
-  readonly provider: 'jev';
+  readonly provider: RerankerProvider | 'none';
+  readonly strategy?: 'model-order' | 'rule-anchor';
   readonly evaluatedCount: number;
   readonly model?: string;
   readonly message?: string;
@@ -40,7 +44,7 @@ export interface HandoffItem {
   readonly name: string;
   readonly ruleScore: number;
   readonly sourceUrls: readonly string[];
-  readonly jev?: JevJudgment;
+  readonly decision?: DecisionJudgment;
 }
 
 export interface ProviderStatus {
@@ -70,7 +74,7 @@ export interface SolutionCandidate extends RankedCandidate {
   readonly evidence: readonly EvidenceItem[];
   readonly relatedCandidates: readonly RawCandidate[];
   readonly validationSteps: readonly ValidationStep[];
-  readonly jev?: JevJudgment;
+  readonly decision?: DecisionJudgment;
 }
 
 export interface DiscoveryResult {

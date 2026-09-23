@@ -18,6 +18,7 @@ const envSchema = z.object({
   WEB_SEARCH_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   TYPESAFE_API_KEY: z.preprocess(emptyToUndefined, z.string().optional()),
   JEV_MODEL: z.preprocess(emptyToUndefined, z.string().min(1).optional()),
+  LAYA_PORT: z.preprocess(emptyToUndefined, z.coerce.number().int().min(1).max(65535).optional()),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('warn'),
   MAX_RESULTS_PER_PROVIDER: z.coerce.number().int().positive().default(10),
   REQUEST_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
