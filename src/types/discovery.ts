@@ -12,6 +12,35 @@ export interface DiscoveryRequest {
   readonly providers: readonly Provider[];
   readonly mode: DiscoveryMode;
   readonly maxResults: number;
+  /** Optional external semantic reranker. Omission keeps the local rules-only flow. */
+  readonly reranker?: 'jev';
+}
+
+export interface JevJudgment {
+  /** Probability that the candidate addresses the stated problem. */
+  readonly relevanceProbability: number;
+  /** Probability that the candidate fits stated stack and constraints. */
+  readonly compatibilityProbability: number;
+  /** Probability that the shown source text provides usable supporting evidence. */
+  readonly evidenceProbability: number;
+  readonly ruleRank: number;
+}
+
+export interface RerankingStatus {
+  readonly state: 'disabled' | 'complete' | 'skipped' | 'failed';
+  readonly provider: 'jev';
+  readonly evaluatedCount: number;
+  readonly model?: string;
+  readonly message?: string;
+}
+
+export interface HandoffItem {
+  readonly solutionKey: string;
+  readonly url: string;
+  readonly name: string;
+  readonly ruleScore: number;
+  readonly sourceUrls: readonly string[];
+  readonly jev?: JevJudgment;
 }
 
 export interface ProviderStatus {
@@ -41,6 +70,7 @@ export interface SolutionCandidate extends RankedCandidate {
   readonly evidence: readonly EvidenceItem[];
   readonly relatedCandidates: readonly RawCandidate[];
   readonly validationSteps: readonly ValidationStep[];
+  readonly jev?: JevJudgment;
 }
 
 export interface DiscoveryResult {
@@ -53,6 +83,9 @@ export interface DiscoveryResult {
   }[];
   readonly providerStatus: readonly ProviderStatus[];
   readonly candidates: readonly SolutionCandidate[];
+  /** The first few non-blocked candidates to hand to a coding agent for review. */
+  readonly handoff?: readonly HandoffItem[];
+  readonly reranking?: RerankingStatus;
   readonly completedAt: string;
 }
 

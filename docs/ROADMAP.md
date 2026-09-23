@@ -25,6 +25,13 @@ runs, and treats a conclusive benchmark relevance miss as a failed quality gate.
 The most recent real run passed 1 of 5 relevance cases, so ranking and benchmark
 case quality remain active release work.
 
+The 0.3.0 beta adds an optional Jev second-stage reranker and a source-linked
+agent handoff. Its API adapter and fallback are tested offline; no TypeSafe key
+was available for a live Jev benchmark when this version was prepared.
+Before claiming an improvement, compare rule-only and Jev Top-3 relevance on
+the same reviewed candidate pools, with latency, cost, safety, and Chinese
+cases recorded separately.
+
 ## P3 Priorities
 
 ### 1. Improve measured real quality

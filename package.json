@@ -1,6 +1,6 @@
 {
   "name": "fixseek",
-  "version": "0.2.0-beta.1",
+  "version": "0.3.0-beta.1",
   "description": "Find existing fixes, tools, GitHub issues, packages, and workarounds before you build from scratch.",
   "main": "dist/cli/index.js",
   "bin": {

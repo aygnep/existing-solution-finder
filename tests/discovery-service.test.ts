@@ -17,6 +17,93 @@ const npmCandidate: RawCandidate = {
 };
 
 describe('discovery service', () => {
+  it('never calls Jev unless the request opts in', async () => {
+    const evaluate = jest.fn();
+    const result = await discoverSolutions({
+      request: { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'], mode: 'real', maxResults: 2 },
+      now: new Date('2026-07-10T00:00:00Z'),
+      searchers: { github: async () => [], web: async () => [], npm: async () => [npmCandidate] },
+      reranker: { evaluate },
+    });
+
+    expect(evaluate).not.toHaveBeenCalled();
+    expect(result.reranking?.state).toBe('disabled');
+  });
+
+  it('uses Jev judgments to rerank a wider shortlist before the final handoff', async () => {
+    const candidates: RawCandidate[] = [
+      npmCandidate,
+      { ...npmCandidate, id: 'https://www.npmjs.com/package/specific-fix', url: 'https://www.npmjs.com/package/specific-fix', name: 'specific-fix', description: 'An interop fix', metadata: { license: 'MIT' } },
+      { ...npmCandidate, id: 'https://www.npmjs.com/package/incompatible-fix', url: 'https://www.npmjs.com/package/incompatible-fix', name: 'incompatible-fix', description: 'Requires an unavailable runtime', metadata: { license: 'MIT' } },
+      { ...npmCandidate, id: 'https://www.npmjs.com/package/archived-fix', url: 'https://www.npmjs.com/package/archived-fix', name: 'archived-fix', metadata: { isArchived: true } },
+    ];
+    const evaluate = jest.fn(async (input: { candidates: readonly { solutionKey: string; name: string }[] }) => ({
+      model: 'jev-1.13.0',
+      judgments: input.candidates.map((candidate) => ({
+        solutionKey: candidate.solutionKey,
+        relevanceProbability: candidate.name === 'specific-fix' ? 0.95 : candidate.name === 'archived-fix' || candidate.name === 'incompatible-fix' ? 0.99 : 0.40,
+        compatibilityProbability: candidate.name === 'specific-fix' ? 0.90 : candidate.name === 'incompatible-fix' ? 0.10 : 0.60,
+        evidenceProbability: candidate.name === 'specific-fix' ? 0.85 : 0.30,
+        model: 'jev-1.13.0',
+      })),
+    }));
+    const result = await discoverSolutions({
+      request: { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'], mode: 'real', maxResults: 2, reranker: 'jev' },
+      now: new Date('2026-07-10T00:00:00Z'),
+      searchers: { github: async () => [], web: async () => [], npm: async () => candidates },
+      reranker: { evaluate },
+    });
+
+    expect(evaluate).toHaveBeenCalledWith(expect.objectContaining({ candidates: expect.arrayContaining([
+      expect.objectContaining({ name: 'specific-fix' }),
+    ]) }));
+    expect(result.reranking).toMatchObject({ state: 'complete', model: 'jev-1.13.0', evaluatedCount: 4 });
+    expect(result.candidates[0]?.name).toBe('specific-fix');
+    expect(result.candidates[0]?.jev?.relevanceProbability).toBe(0.95);
+    expect(result.handoff?.map((item) => item.name)).toEqual(['specific-fix', 'vite-helper']);
+    expect(result.handoff?.some((item) => item.name === 'archived-fix')).toBe(false);
+    expect(result.handoff?.some((item) => item.name === 'incompatible-fix')).toBe(false);
+  });
+
+  it('keeps rule ranking when Jev is unavailable or fails', async () => {
+    const request = { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'] as const, mode: 'real' as const, maxResults: 1, reranker: 'jev' as const };
+    const searchers = { github: async () => [], web: async () => [], npm: async () => [npmCandidate] };
+    const options = { request, now: new Date('2026-07-10T00:00:00Z'), searchers };
+
+    const missingKey = await discoverSolutions(options);
+    const failed = await discoverSolutions({ ...options, reranker: { evaluate: async () => { throw new Error('provider secret'); } } });
+
+    expect(missingKey.reranking?.state).toBe('skipped');
+    expect(failed.reranking?.state).toBe('failed');
+    expect(failed.reranking?.message).not.toContain('secret');
+    expect(missingKey.handoff?.[0]?.name).toBe('vite-helper');
+    expect(failed.handoff?.[0]?.name).toBe('vite-helper');
+  });
+
+  it('bounds Jev calls while preserving a larger requested result list', async () => {
+    const candidates = Array.from({ length: 35 }, (_, index): RawCandidate => ({
+      ...npmCandidate,
+      id: `https://www.npmjs.com/package/fix-${index}`,
+      url: `https://www.npmjs.com/package/fix-${index}`,
+      name: `fix-${index}`,
+    }));
+    let evaluatedCount = 0;
+    const result = await discoverSolutions({
+      request: { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'], mode: 'real', maxResults: 35, reranker: 'jev' },
+      now: new Date('2026-07-10T00:00:00Z'),
+      searchers: { github: async () => [], web: async () => [], npm: async () => candidates },
+      reranker: { evaluate: async ({ candidates: shortlist }) => {
+        evaluatedCount = shortlist.length;
+        return { model: 'jev-1.13.0', judgments: shortlist.map((candidate) => ({
+          solutionKey: candidate.solutionKey, relevanceProbability: 0.5, compatibilityProbability: 0.5, evidenceProbability: 0.5, model: 'jev-1.13.0',
+        })) };
+      } },
+    });
+
+    expect(evaluatedCount).toBe(30);
+    expect(result.candidates).toHaveLength(35);
+  });
+
   it('keeps distinct npm packages from the same repository as separate solutions', async () => {
     const packages = [
       { ...npmCandidate, id: 'https://www.npmjs.com/package/first', name: 'first', metadata: { repositoryUrl: 'https://github.com/example/monorepo' } },

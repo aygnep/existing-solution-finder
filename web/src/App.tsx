@@ -19,6 +19,8 @@ const copy = {
     real: 'Real mode', empty: 'Describe a problem to preview the search plan.', failed: 'Discovery failed. Check provider status and retry.',
     loading: 'Searching providers…',
     stackHint: 'e.g. Node.js, Docker', constraintsHint: 'e.g. local only, MIT', noResults: 'No candidates found.',
+    jev: 'Use Jev to rerank the handoff', jevDisclosure: 'Sends the problem and short source excerpts to TypeSafe AI. Requires a server-side API key.',
+    handoff: 'Agent handoff', ruleScore: 'Rule score', jevRelevance: 'Jev relevance', jevCompatibility: 'Compatibility', jevEvidence: 'Evidence probability',
   },
   zh: {
     title: 'Fixseek', subtitle: '基于证据的解决方案发现', problem: '描述你的问题',
@@ -28,6 +30,8 @@ const copy = {
     real: '真实模式', empty: '描述一个问题以预览检索计划。', failed: '检索失败，请检查来源状态后重试。',
     loading: '正在检索各来源…',
     stackHint: '例如 Node.js、Docker', constraintsHint: '例如仅本地、MIT', noResults: '未找到候选结果。',
+    jev: '使用 Jev 重排交接候选', jevDisclosure: '会将问题和简短来源摘录发送给 TypeSafe AI；需要服务端 API Key。',
+    handoff: '交接给 Agent', ruleScore: '规则分数', jevRelevance: 'Jev 相关概率', jevCompatibility: '兼容概率', jevEvidence: '证据概率',
   },
 } as const;
 
@@ -36,6 +40,7 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
   const [stack, setStack] = useState('');
   const [constraints, setConstraints] = useState('');
   const [providers, setProviders] = useState<DiscoveryRequest['providers']>(['github', 'npm', 'web']);
+  const [useJev, setUseJev] = useState(false);
   const [language, setLanguage] = useState<Language>('en');
   const [result, setResult] = useState<DiscoveryResult>();
   const [selectedKeys, setSelectedKeys] = useState<readonly string[]>([]);
@@ -53,14 +58,17 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
     setSelectedKeys([]);
     setIsLoading(true);
     try {
-      setResult(await discover({
+      const found = await discover({
         problem,
         stack: splitList(stack),
         constraints: splitList(constraints),
         providers,
         mode: 'real',
         maxResults: 10,
-      }));
+        ...(useJev ? { reranker: 'jev' as const } : {}),
+      });
+      setResult(found);
+      setSelectedKeys(found.handoff?.map((item) => item.solutionKey) ?? []);
     } catch {
       setError(text.failed);
     } finally {
@@ -82,8 +90,8 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
     if (!result) return;
     const candidates = result.candidates.filter((candidate) => selectedKeys.includes(candidate.solutionKey));
     const content = kind === 'report'
-      ? renderSolutionReport({ request: result.request, candidates, language })
-      : renderAgentSkill({ request: result.request, candidates, language });
+      ? renderSolutionReport({ request: result.request, candidates, language, reranking: result.reranking })
+      : renderAgentSkill({ request: result.request, candidates, language, reranking: result.reranking });
     const anchor = document.createElement('a');
     anchor.href = URL.createObjectURL(new Blob([content], { type: 'text/markdown;charset=utf-8' }));
     anchor.download = kind === 'report' ? 'fixseek-solution-report.md' : 'fixseek-solution-skill.md';
@@ -116,6 +124,8 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
             {providerLabel(provider)}
           </label>)}</div>
         </fieldset>
+        <label className="jev-opt-in"><input type="checkbox" checked={useJev} onChange={(event) => setUseJev(event.target.checked)} disabled={isLoading} />{text.jev}</label>
+        <p className="jev-disclosure">{text.jevDisclosure}</p>
         <button className="primary-action" type="submit" disabled={isLoading || !problem.trim() || providers.length === 0}>
           {isLoading ? text.loading : text.search}
         </button>
@@ -131,11 +141,14 @@ export function App({ discover = discoverFromGateway }: AppProps): JSX.Element {
             {providerLabel(status.provider)}：{providerState(status.state, language)}{status.message ? ` — ${status.message}` : ''}
           </p>)}
         </section>
+        {result.request.reranker === 'jev' && result.reranking && <p className="rerank-status">Jev: {providerState(result.reranking.state, language)}{result.reranking.message ? ` — ${result.reranking.message}` : ''}</p>}
+        {result.handoff && result.handoff.length > 0 && <section className="handoff-panel"><h2>{text.handoff}</h2><ol>{result.handoff.map((item) => <li key={item.solutionKey}><a href={item.url}>{item.name}</a> · {text.ruleScore} {item.ruleScore}{item.jev ? ` · ${text.jevRelevance} ${item.jev.relevanceProbability.toFixed(2)} · ${text.jevCompatibility} ${item.jev.compatibilityProbability.toFixed(2)} · ${text.jevEvidence} ${item.jev.evidenceProbability.toFixed(2)}` : ''}</li>)}</ol></section>}
         <div className="results-heading"><h2>{text.results}</h2><span>{result.candidates.length}</span></div>
         {result.candidates.length === 0 && <p>{text.noResults}</p>}
         {result.candidates.map((candidate) => <article className="candidate-card" key={candidate.solutionKey}>
           <div className="candidate-header"><div><p className="eyebrow">#{candidate.rank} · {candidate.candidateType}</p><h3>{candidate.name}</h3></div>
-            <p className="score">{candidate.score.displayTotal}<span>/100</span></p></div>
+            <p className="score">{candidate.score.displayTotal}<span>/100 {text.ruleScore}</span></p></div>
+          {candidate.jev && <p className="jev-probability">{text.jevRelevance}: {candidate.jev.relevanceProbability.toFixed(2)} · {text.jevCompatibility}: {candidate.jev.compatibilityProbability.toFixed(2)} · {text.jevEvidence}: {candidate.jev.evidenceProbability.toFixed(2)}</p>}
           <section><h4>{text.why}</h4><p>{formatMatchReason(candidate, language)}</p></section>
           <section><h4>{text.evidence}</h4><ul>{candidate.evidence.map((evidence) => <li key={evidence.sourceUrl}><a href={evidence.sourceUrl}>{evidence.title}</a>{evidence.excerpt ? ` — ${evidence.excerpt}` : ''}</li>)}</ul></section>
           {candidate.score.warnings.length > 0 && <section className="warnings"><h4>{text.warnings}</h4>{candidate.score.warnings.map((warning) => <p key={warning.message}>{warning.category}: {formatSafetyWarning(warning, language)}</p>)}</section>}

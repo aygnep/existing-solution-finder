@@ -41,6 +41,16 @@ describe('web gateway', () => {
     await app.close();
   });
 
+  it('accepts an explicit Jev opt-in in the request contract', async () => {
+    const discover = jest.fn(async () => fixtureResult);
+    const app = createGateway({ discover });
+    const response = await app.inject({ method: 'POST', url: '/api/discover', payload: { ...fixtureRequest, reranker: 'jev' } });
+
+    expect(response.statusCode).toBe(200);
+    expect(discover).toHaveBeenCalledWith(expect.objectContaining({ reranker: 'jev' }));
+    await app.close();
+  });
+
   it('never returns a token from a provider error', async () => {
     const app = createGateway({
       discover: async () => {

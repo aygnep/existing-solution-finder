@@ -31,6 +31,25 @@ test('shows loading and provider state with a deterministic gateway response', a
   expect((await request).postDataJSON()).toMatchObject({ mode: 'real' });
 });
 
+test('makes Jev an explicit browser opt-in and shows fallback state', async ({ page }) => {
+  await page.route('**/api/discover', async (route) => {
+    await route.fulfill({ json: {
+      ...deterministicResult,
+      request: { ...deterministicResult.request, reranker: 'jev' },
+      reranking: { provider: 'jev', state: 'skipped', evaluatedCount: 0, message: 'TYPESAFE_API_KEY is not configured; rule ranking was retained.' },
+      handoff: [],
+    } });
+  });
+  await page.goto('/');
+  await page.getByLabel('Describe the problem').fill('reasoning_content error with Claude Code');
+  await page.getByLabel('Use Jev to rerank the handoff').check();
+  const request = page.waitForRequest('**/api/discover');
+  await page.getByRole('button', { name: 'Search solutions' }).click();
+
+  expect((await request).postDataJSON()).toMatchObject({ reranker: 'jev' });
+  await expect(page.getByText(/Jev: skipped/)).toBeVisible();
+});
+
 test('real-provider smoke returns provider state', async ({ page }) => {
   test.skip(process.env.FIXSEEK_REAL_E2E !== '1', 'Set FIXSEEK_REAL_E2E=1 to run the external-provider smoke test.');
   test.setTimeout(240_000);

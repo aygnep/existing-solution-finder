@@ -54,6 +54,17 @@ describe('Solution Guide', () => {
     await waitFor(() => expect(discover).toHaveBeenCalledWith(expect.objectContaining({ mode: 'real' })));
   });
 
+  it('only requests Jev when the user opts in', async () => {
+    const discover = jest.fn().mockResolvedValue(result);
+    render(<App discover={discover} />);
+
+    fireEvent.change(screen.getByLabelText('Describe the problem'), { target: { value: 'Vite cannot find module' } });
+    fireEvent.click(screen.getByLabelText('Use Jev to rerank the handoff'));
+    fireEvent.click(screen.getByRole('button', { name: 'Search solutions' }));
+
+    await waitFor(() => expect(discover).toHaveBeenCalledWith(expect.objectContaining({ reranker: 'jev' })));
+  });
+
   it('switches system-generated result text to Chinese without another discovery request', async () => {
     const discover = jest.fn().mockResolvedValue(result);
     render(<App discover={discover} />);

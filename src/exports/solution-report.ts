@@ -1,4 +1,4 @@
-import type { DiscoveryRequest, SolutionCandidate } from '../types/discovery.js';
+import type { DiscoveryRequest, RerankingStatus, SolutionCandidate } from '../types/discovery.js';
 import { formatMatchReason, formatSafetyWarning, formatValidationStep } from '../core/candidate-presentation.js';
 import type { Language } from '../i18n/types.js';
 
@@ -6,13 +6,14 @@ export interface SolutionExportInput {
   readonly request: DiscoveryRequest;
   readonly candidates: readonly SolutionCandidate[];
   readonly language?: Language;
+  readonly reranking?: RerankingStatus;
 }
 
 export function renderSolutionReport(input: SolutionExportInput): string {
   const language = input.language ?? 'en';
   const labels = language === 'zh'
-    ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '评分', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤' }
-    : { title: '# Fixseek Solution Report', problem: 'Problem', sources: 'Sources', score: 'Score', why: 'Why', evidence: 'Evidence', warnings: 'Safety warnings', validation: 'Validation' };
+    ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '规则分数', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤', reranking: 'Jev 重排', relevance: '相关概率', compatibility: '兼容概率', evidenceProbability: '证据概率' }
+    : { title: '# Fixseek Solution Report', problem: 'Problem', sources: 'Sources', score: 'Rule score', why: 'Why', evidence: 'Evidence', warnings: 'Safety warnings', validation: 'Validation', reranking: 'Jev reranking', relevance: 'Relevance probability', compatibility: 'Compatibility probability', evidenceProbability: 'Evidence probability' };
   const lines = [
     labels.title,
     '',
@@ -20,12 +21,16 @@ export function renderSolutionReport(input: SolutionExportInput): string {
     '',
     `## ${labels.sources}\n${input.request.providers.join(', ') || 'None'}`,
   ];
+  if (input.request.reranker === 'jev' && input.reranking) {
+    lines.push('', `${labels.reranking}: ${input.reranking.state}${input.reranking.model ? ` (${input.reranking.model})` : ''}`);
+  }
 
   for (const candidate of input.candidates) {
     lines.push(
       '',
       `## ${candidate.name}`,
       `- ${labels.score}: ${candidate.score.displayTotal}/100 (${candidate.score.trustLevel})`,
+      ...(candidate.jev ? [`- ${labels.relevance}: ${candidate.jev.relevanceProbability.toFixed(3)}; ${labels.compatibility}: ${candidate.jev.compatibilityProbability.toFixed(3)}; ${labels.evidenceProbability}: ${candidate.jev.evidenceProbability.toFixed(3)}`] : []),
       `- ${labels.why}: ${formatMatchReason(candidate, language)}`,
       `- ${labels.evidence}:`,
       ...candidate.evidence.map((evidence) => `  - ${evidence.sourceUrl}${evidence.excerpt ? ` — ${evidence.excerpt}` : ''}`),

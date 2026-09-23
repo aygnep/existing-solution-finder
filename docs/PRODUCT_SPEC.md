@@ -36,7 +36,8 @@ Markdown report or agent-skill draft.
 ## Scope
 
 Included: local CLI, local no-account Web Solution Guide, GitHub, npm, optional
-web providers, deterministic ranking, and ephemeral sessions.
+web providers, deterministic ranking, explicit opt-in Jev reranking with
+rule-order fallback, and ephemeral sessions.
 
 Deferred: persistence, accounts, teams, private sources, authentication,
-automatic remediation, and LLM control over search, scoring, or safety.
+automatic remediation, and generative-model control over search or safety.
