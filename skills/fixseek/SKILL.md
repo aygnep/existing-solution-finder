@@ -29,6 +29,8 @@ Do not describe `partial`, `skipped`, or `failed` as a clean empty search. When 
 
 For an explicitly requested Jev-assisted handoff, run `fixseek --json --reranker jev "problem"`. This sends the problem and bounded source excerpts to TypeSafe AI only when `TYPESAFE_API_KEY` is configured. Read `result.reranking` before using `result.handoff`; `skipped` and `failed` mean the handoff followed the local rule order. Jev's Noul probabilities are relevance signals, not verified fix probabilities. Keep provider gaps, original rule scores, and safety warnings visible when presenting the handoff.
 
+For local, open-source reranking, use `fixseek --json --reranker laya "problem"` after starting the loopback service described in `docs/LAYA_LOCAL.md`. Laya is an independent model, not a Jev checkpoint. Its handoff keeps the first non-blocked rule candidate and fills the remaining places from Laya's order. Read `result.reranking.strategy` and each `decision.provider`; do not claim the local model improved quality without a reviewed comparison.
+
 ## Network fallback
 
 Try the CLI directly when it can reach providers. If the calling environment cannot reach the host VPN/TUN network, use the loopback gateway only when a host-side connector can reach it. See `docs/FIXSEEK_HOST_GATEWAY.md` in the Fixseek repository for its request contract. A loopback listener alone does not bridge a sandbox. Check `/health` before use; ask for authorization before starting a persistent listener that is not already running. Keep it bound to `127.0.0.1` and inspect provider states in every response.

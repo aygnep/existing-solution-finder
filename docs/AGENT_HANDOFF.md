@@ -4,11 +4,17 @@ Updated: 2026-09-23
 
 ## Current State
 
+- The 0.4.0 beta adds a separate local Laya reranker. A loopback Laya 0.3.9
+  service was tested on Apple Silicon with English and Chinese requests; the
+  Router selected the multilingual checkpoint for Chinese. Fixseek schema is
+  1.3 and the local handoff uses a rule-leader anchor. The initial five-case
+  comparison did not show an overall gain from pure Laya order.
+
 - The 0.3.0 beta adds explicit opt-in Jev reranking for CLI and Web, with a
   source-linked top-three handoff and rule-order fallback. Agent JSON schema is
   1.2. No TypeSafe key was available during development; the adapter and
-  fallback were tested with deterministic responses, but live Jev quality is
-  unverified.
+  fallback were tested with deterministic responses, but live hosted Jev
+  quality is unverified.
 
 - GitHub beta 0.2.0 added Chinese query fallback, per-query partial provider
   results, source-URL-safe JSON redaction, grouping before Top N with distinct
@@ -68,11 +74,11 @@ integration into developer workflows rather than a one-off result list.
 
 ## Verification
 
-- `npm test -- --runInBand --silent`: 27 suites and 251 tests passed.
+- `npm test -- --runInBand --silent`: 27 suites and 259 tests passed.
 - `npm run typecheck`: passed.
 - `npm run build`: passed, including the Web bundle.
 - `npm run lint`: passed.
-- `npx playwright test e2e/solution-guide.spec.ts`: two deterministic Web flows
+- `npx playwright test e2e/solution-guide.spec.ts`: three deterministic Web flows
   passed; the external-provider smoke test is opt-in with `FIXSEEK_REAL_E2E=1`
   and has its own provider-aligned timeout.
 - `git diff --check`: passed.

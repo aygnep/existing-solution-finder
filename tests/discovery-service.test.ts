@@ -17,6 +17,47 @@ const npmCandidate: RawCandidate = {
 };
 
 describe('discovery service', () => {
+  it('labels local Laya judgments without presenting them as hosted Jev', async () => {
+    const result = await discoverSolutions({
+      request: { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'], mode: 'real', maxResults: 2, reranker: 'laya' },
+      now: new Date('2026-07-10T00:00:00Z'),
+      searchers: { github: async () => [], web: async () => [], npm: async () => [npmCandidate] },
+      reranker: { evaluate: async ({ candidates }) => ({
+        model: 'laya/english',
+        judgments: candidates.map((candidate) => ({
+          solutionKey: candidate.solutionKey, relevanceProbability: 0.75,
+          compatibilityProbability: 0.80, evidenceProbability: 0.60, model: 'laya/english',
+        })),
+      }) },
+    });
+
+    expect(result.reranking).toMatchObject({ provider: 'laya', state: 'complete', model: 'laya/english' });
+    expect(result.handoff?.[0]?.decision).toMatchObject({ provider: 'laya', model: 'laya/english', relevanceProbability: 0.75 });
+  });
+
+  it('retains the rule leader when Laya assigns it a lower probability', async () => {
+    const weaker: RawCandidate = { ...npmCandidate,
+      id: 'https://www.npmjs.com/package/secondary-fix', url: 'https://www.npmjs.com/package/secondary-fix',
+      name: 'secondary-fix', metadata: { license: 'MIT' },
+    };
+    const result = await discoverSolutions({
+      request: { problem: 'vite module not found', stack: [], constraints: [], providers: ['npm'], mode: 'real', maxResults: 2, reranker: 'laya' },
+      now: new Date('2026-07-10T00:00:00Z'),
+      searchers: { github: async () => [], web: async () => [], npm: async () => [npmCandidate, weaker] },
+      reranker: { evaluate: async ({ candidates }) => ({
+        model: 'laya/english', judgments: candidates.map((candidate) => ({
+          solutionKey: candidate.solutionKey,
+          relevanceProbability: candidate.name === 'vite-helper' ? 0.20 : 0.95,
+          compatibilityProbability: 0.90, evidenceProbability: 0.80, model: 'laya/english',
+        })),
+      }) },
+    });
+
+    expect(result.reranking?.strategy).toBe('rule-anchor');
+    expect(result.handoff?.map((item) => item.name)).toEqual(['vite-helper', 'secondary-fix']);
+    expect(result.handoff?.[0]?.decision?.relevanceProbability).toBe(0.20);
+  });
+
   it('never calls Jev unless the request opts in', async () => {
     const evaluate = jest.fn();
     const result = await discoverSolutions({
@@ -59,7 +100,8 @@ describe('discovery service', () => {
     ]) }));
     expect(result.reranking).toMatchObject({ state: 'complete', model: 'jev-1.13.0', evaluatedCount: 4 });
     expect(result.candidates[0]?.name).toBe('specific-fix');
-    expect(result.candidates[0]?.jev?.relevanceProbability).toBe(0.95);
+    expect(result.candidates[0]?.decision?.relevanceProbability).toBe(0.95);
+    expect(result.candidates[0]?.decision?.provider).toBe('jev');
     expect(result.handoff?.map((item) => item.name)).toEqual(['specific-fix', 'vite-helper']);
     expect(result.handoff?.some((item) => item.name === 'archived-fix')).toBe(false);
     expect(result.handoff?.some((item) => item.name === 'incompatible-fix')).toBe(false);

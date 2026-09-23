@@ -50,6 +50,9 @@ authorized worker is available.
    configured, add `--reranker jev`. Inspect `result.reranking` and
    `result.handoff`; a skipped or failed rerank retains the rule order.
    Jev probabilities do not replace source verification or safety warnings.
+   Use `--reranker laya` for the separate local model after its loopback
+   service is healthy. Laya needs no TypeSafe key; its handoff keeps a rule
+   leader and reports `strategy: rule-anchor`. See `docs/LAYA_LOCAL.md`.
 3. **Check provider health**
    - Distinguish `complete`, `partial`, `empty`, `skipped`, and `failed`.
    - `partial` retains successful results but signals incomplete query coverage.

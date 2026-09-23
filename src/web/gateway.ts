@@ -2,7 +2,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { discoverSolutions } from '../core/discovery-service.js';
 import { createDiscoverySearchers } from '../providers/discovery-searchers.js';
-import { createJevReranker } from '../providers/jev-reranker.js';
+import { createJevReranker, createLayaReranker } from '../providers/system-one-reranker.js';
 import { loadEnv } from '../utils/env.js';
 import { buildDiscoveryRequest, type DiscoveryRequest, type DiscoveryResult } from '../types/discovery.js';
 
@@ -13,7 +13,7 @@ const requestSchema = z.object({
   providers: z.array(z.enum(['github', 'npm', 'web'])).min(1).max(3),
   mode: z.enum(['mock', 'real']),
   maxResults: z.number().int().min(1).max(20),
-  reranker: z.enum(['jev']).optional(),
+  reranker: z.enum(['jev', 'laya']).optional(),
 });
 
 export interface GatewayDependencies {
@@ -41,8 +41,10 @@ export function createGateway(dependencies: GatewayDependencies = {}): FastifyIn
 
 async function discoverFromEnvironment(request: DiscoveryRequest): Promise<DiscoveryResult> {
   const searchers = await createDiscoverySearchers(request.mode);
-  const reranker = request.reranker === 'jev' && request.mode === 'real'
-    ? createJevReranker(loadEnv()) : undefined;
+  const reranker = request.mode === 'real'
+    ? request.reranker === 'jev' ? createJevReranker(loadEnv())
+      : request.reranker === 'laya' ? createLayaReranker(loadEnv()) : undefined
+    : undefined;
   return discoverSolutions({ request, now: new Date(), searchers, reranker });
 }
 

@@ -12,8 +12,8 @@ export interface SolutionExportInput {
 export function renderSolutionReport(input: SolutionExportInput): string {
   const language = input.language ?? 'en';
   const labels = language === 'zh'
-    ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '规则分数', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤', reranking: 'Jev 重排', relevance: '相关概率', compatibility: '兼容概率', evidenceProbability: '证据概率' }
-    : { title: '# Fixseek Solution Report', problem: 'Problem', sources: 'Sources', score: 'Rule score', why: 'Why', evidence: 'Evidence', warnings: 'Safety warnings', validation: 'Validation', reranking: 'Jev reranking', relevance: 'Relevance probability', compatibility: 'Compatibility probability', evidenceProbability: 'Evidence probability' };
+    ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '规则分数', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤', reranking: '重排', relevance: '相关概率', compatibility: '兼容概率', evidenceProbability: '证据概率' }
+    : { title: '# Fixseek Solution Report', problem: 'Problem', sources: 'Sources', score: 'Rule score', why: 'Why', evidence: 'Evidence', warnings: 'Safety warnings', validation: 'Validation', reranking: 'Reranking', relevance: 'Relevance probability', compatibility: 'Compatibility probability', evidenceProbability: 'Evidence probability' };
   const lines = [
     labels.title,
     '',
@@ -21,8 +21,8 @@ export function renderSolutionReport(input: SolutionExportInput): string {
     '',
     `## ${labels.sources}\n${input.request.providers.join(', ') || 'None'}`,
   ];
-  if (input.request.reranker === 'jev' && input.reranking) {
-    lines.push('', `${labels.reranking}: ${input.reranking.state}${input.reranking.model ? ` (${input.reranking.model})` : ''}`);
+  if (input.request.reranker && input.reranking) {
+    lines.push('', `${input.reranking.provider} ${labels.reranking}: ${input.reranking.state}${input.reranking.model ? ` (${input.reranking.model})` : ''}`);
   }
 
   for (const candidate of input.candidates) {
@@ -30,7 +30,7 @@ export function renderSolutionReport(input: SolutionExportInput): string {
       '',
       `## ${candidate.name}`,
       `- ${labels.score}: ${candidate.score.displayTotal}/100 (${candidate.score.trustLevel})`,
-      ...(candidate.jev ? [`- ${labels.relevance}: ${candidate.jev.relevanceProbability.toFixed(3)}; ${labels.compatibility}: ${candidate.jev.compatibilityProbability.toFixed(3)}; ${labels.evidenceProbability}: ${candidate.jev.evidenceProbability.toFixed(3)}`] : []),
+      ...(candidate.decision ? [`- ${candidate.decision.provider} ${labels.relevance}: ${candidate.decision.relevanceProbability.toFixed(3)}; ${labels.compatibility}: ${candidate.decision.compatibilityProbability.toFixed(3)}; ${labels.evidenceProbability}: ${candidate.decision.evidenceProbability.toFixed(3)}`] : []),
       `- ${labels.why}: ${formatMatchReason(candidate, language)}`,
       `- ${labels.evidence}:`,
       ...candidate.evidence.map((evidence) => `  - ${evidence.sourceUrl}${evidence.excerpt ? ` — ${evidence.excerpt}` : ''}`),

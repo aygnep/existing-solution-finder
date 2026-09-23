@@ -59,6 +59,17 @@ describe('Fixseek agent-first CLI workflow', () => {
     expect(envelope.result.handoff.every((item: { sourceUrls: string[] }) => item.sourceUrls.length > 0)).toBe(true);
   });
 
+  it('accepts Laya as a distinct local reranker', async () => {
+    const { io, stdout } = makeIo();
+    const code = await runSolve(['reasoning_content error with Claude Code'], {
+      mock: true, json: true, reranker: 'laya', maxResults: '3', logLevel: 'warn', lang: 'en',
+    }, io);
+    const envelope = JSON.parse(stdout.text());
+    expect(code).toBe(0);
+    expect(envelope.invocation.reranker).toBe('laya');
+    expect(envelope.result.reranking).toMatchObject({ provider: 'laya', state: 'skipped' });
+  });
+
   it('rejects an unknown reranker before making a search request', async () => {
     const { io, stdout } = makeIo();
     const code = await runSolve(['vite error'], {
@@ -131,7 +142,7 @@ describe('Fixseek agent-first CLI workflow', () => {
 
     expect(code).toBe(1);
     expect(JSON.parse(stdout.text())).toMatchObject({
-      schemaVersion: '1.2',
+      schemaVersion: '1.3',
       kind: 'fixseek.error',
       ok: false,
       error: { code: 'conflicting_modes' },
@@ -156,7 +167,7 @@ describe('Fixseek agent-first CLI workflow', () => {
     expect(code).toBe(0);
     const envelope = JSON.parse(stdout.text());
     expect(envelope).toMatchObject({
-      schemaVersion: '1.2',
+      schemaVersion: '1.3',
       kind: 'fixseek.discovery',
       ok: true,
       invocation: {

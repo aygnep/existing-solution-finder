@@ -31,7 +31,7 @@ fixseek --json --stack "Vite,Node.js" "module not found after pnpm install"
 
 `complete`, `partial`, `empty`, `skipped`, and `failed` remain distinct in JSON.
 For example, `partial` keeps results from successful queries while showing that
-other queries failed. The agent JSON envelope is schema version `1.2`. See the [Codex skill](skills/fixseek/SKILL.md) for a
+other queries failed. The agent JSON envelope is schema version `1.3`. See the [Codex skill](skills/fixseek/SKILL.md) for a
 reusable agent workflow.
 
 ```mermaid
@@ -48,7 +48,7 @@ flowchart LR
 npm install -g fixseek
 ```
 
-The npm registry currently serves the stable 0.1.0 release. The 0.3.0 beta
+The npm registry currently serves the stable 0.1.0 release. The 0.4.0 beta
 changes in this repository can be built locally with `npm install && npm run build`.
 
 ## Quick Start
@@ -99,6 +99,9 @@ fixseek --json --stack "Vite,Node.js" \
 # Optional Jev reranking and a short agent handoff
 fixseek --json --reranker jev "vite module not found after pnpm install"
 
+# Local, open-source Laya reranking (start the loopback service first)
+fixseek --json --reranker laya "vite module not found after pnpm install"
+
 # Chinese output
 fixseek --lang zh "reasoning_content 报错"
 
@@ -112,9 +115,18 @@ not require a token. The default mode attempts every provider and preserves
 each provider's `complete`, `partial`, `empty`, `skipped`, or `failed` state. `--real`
 remains accepted as an explicit compatibility flag.
 
-### Optional Jev handoff
+### Optional model-assisted handoff
 
-Set `TYPESAFE_API_KEY` and opt in with `--reranker jev` or the Web checkbox.
+Use `--reranker laya` for the [local Laya setup](docs/LAYA_LOCAL.md). Laya is
+an independent Apache-2.0 model with a Jev-compatible HTTP API. Fixseek
+connects only to its loopback service, so no TypeSafe account or key is needed.
+Its Router selects an English or multilingual checkpoint for each request.
+Laya keeps the first non-blocked rule-ranked candidate in the handoff, then
+fills the remaining places from its own ranking. The current five-case real
+benchmark did not establish an overall relevance gain, so treat every
+model-selected candidate as a lead to verify.
+
+Set `TYPESAFE_API_KEY` and opt in with `--reranker jev` or the Web menu.
 Fixseek sends the problem, stack, constraints, and bounded source excerpts to
 TypeSafe AI. Jev evaluates a wider shortlist before the final result limit;
 the output keeps the original rule score and adds per-candidate relevance,
@@ -181,6 +193,7 @@ loads the first available values from the current directory's `.env` and then
 | `WEB_SEARCH_API_KEY` | API key for the configured web search provider. |
 | `TYPESAFE_API_KEY` | Optional TypeSafe key for explicit Jev reranking. Never sent to the browser. |
 | `JEV_MODEL` | Optional model ID; defaults to `jev-1.13.0`. |
+| `LAYA_PORT` | Local Laya loopback port; defaults to `8766`. |
 | `FIXSEEK_ENV_FILE` | Optional explicit environment-file path. |
 | `FIXSEEK_OUTCOME_FILE` | Optional outcome JSONL path; defaults to `~/.config/fixseek/outcomes.jsonl`. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, or `error`. Default: `warn`. |

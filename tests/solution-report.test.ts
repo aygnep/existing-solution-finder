@@ -51,14 +51,26 @@ describe('solution exporters', () => {
   it('labels Jev judgments separately from the rule score in handoff exports', () => {
     const markdown = renderSolutionReport({
       request: { ...request, reranker: 'jev' },
-      candidates: [{ ...solution, jev: { relevanceProbability: 0.84, compatibilityProbability: 0.81, evidenceProbability: 0.72, ruleRank: 2 } }],
+      candidates: [{ ...solution, decision: { provider: 'jev', model: 'jev-1.13.0', relevanceProbability: 0.84, compatibilityProbability: 0.81, evidenceProbability: 0.72, ruleRank: 2 } }],
       reranking: { provider: 'jev', state: 'complete', model: 'jev-1.13.0', evaluatedCount: 3 },
     });
 
-    expect(markdown).toContain('Jev reranking: complete (jev-1.13.0)');
+    expect(markdown).toContain('jev Reranking: complete (jev-1.13.0)');
     expect(markdown).toContain('Rule score: 0/100');
-    expect(markdown).toContain('Relevance probability: 0.840');
+    expect(markdown).toContain('jev Relevance probability: 0.840');
     expect(markdown).toContain('Compatibility probability: 0.810');
     expect(markdown).toContain('Evidence probability: 0.720');
+  });
+
+  it('identifies local Laya separately in handoff exports', () => {
+    const markdown = renderSolutionReport({
+      request: { ...request, reranker: 'laya' },
+      candidates: [{ ...solution, decision: { provider: 'laya', model: 'laya/multilingual', relevanceProbability: 0.61, compatibilityProbability: 0.77, evidenceProbability: 0.58, ruleRank: 2 } }],
+      reranking: { provider: 'laya', state: 'complete', strategy: 'rule-anchor', model: 'laya/multilingual', evaluatedCount: 2 },
+    });
+
+    expect(markdown).toContain('laya Reranking: complete (laya/multilingual)');
+    expect(markdown).toContain('laya Relevance probability: 0.610');
+    expect(markdown).not.toContain('jev Relevance probability');
   });
 });

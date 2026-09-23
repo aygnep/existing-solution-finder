@@ -42,12 +42,33 @@ test('makes Jev an explicit browser opt-in and shows fallback state', async ({ p
   });
   await page.goto('/');
   await page.getByLabel('Describe the problem').fill('reasoning_content error with Claude Code');
-  await page.getByLabel('Use Jev to rerank the handoff').check();
+  await page.getByLabel('Handoff ranking').selectOption('jev');
   const request = page.waitForRequest('**/api/discover');
   await page.getByRole('button', { name: 'Search solutions' }).click();
 
   expect((await request).postDataJSON()).toMatchObject({ reranker: 'jev' });
-  await expect(page.getByText(/Jev: skipped/)).toBeVisible();
+  await expect(page.getByText(/jev: skipped/i)).toBeVisible();
+});
+
+test('offers local Laya without sending a model API key in the browser request', async ({ page }) => {
+  await page.route('**/api/discover', async (route) => {
+    await route.fulfill({ json: {
+      ...deterministicResult,
+      request: { ...deterministicResult.request, reranker: 'laya' },
+      reranking: { provider: 'laya', state: 'failed', evaluatedCount: 0, message: 'Local service unavailable.' },
+      handoff: [],
+    } });
+  });
+  await page.goto('/');
+  await page.getByLabel('Describe the problem').fill('reasoning_content error with Claude Code');
+  await page.getByLabel('Handoff ranking').selectOption('laya');
+  const request = page.waitForRequest('**/api/discover');
+  await page.getByRole('button', { name: 'Search solutions' }).click();
+
+  const payload = (await request).postDataJSON();
+  expect(payload.reranker).toBe('laya');
+  expect(payload).not.toHaveProperty('TYPESAFE_API_KEY');
+  await expect(page.getByText(/laya: failed/i)).toBeVisible();
 });
 
 test('real-provider smoke returns provider state', async ({ page }) => {

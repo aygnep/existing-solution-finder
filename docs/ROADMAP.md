@@ -32,6 +32,12 @@ Before claiming an improvement, compare rule-only and Jev Top-3 relevance on
 the same reviewed candidate pools, with latency, cost, safety, and Chinese
 cases recorded separately.
 
+The 0.4.0 beta adds a separate local Laya backend using the Jev-compatible
+HTTP contract. English and Chinese requests were exercised on an Apple Silicon
+Mac with Laya 0.3.9. Pure Laya order helped one benchmark target and demoted
+another; the handoff therefore retains a rule-ranked anchor. Broader labeled
+evaluation remains necessary before making a quality claim.
+
 ## P3 Priorities
 
 ### 1. Improve measured real quality

@@ -10,6 +10,7 @@ import {
   type DiscoveryResult,
   type HandoffItem,
   type ProviderStatus,
+  type RerankerProvider,
   type SolutionCandidate,
 } from '../types/discovery.js';
 import type { Provider, Query, RawCandidate } from '../types/candidate.js';
@@ -38,17 +39,17 @@ export interface DiscoverSolutionsOptions {
   readonly request: DiscoveryRequest;
   readonly now: Date;
   readonly searchers: DiscoverySearchers;
-  readonly reranker?: JevReranker;
+  readonly reranker?: DecisionReranker;
 }
 
-export interface JevRerankInput {
+export interface DecisionRerankInput {
   readonly problem: string;
   readonly stack: readonly string[];
   readonly constraints: readonly string[];
   readonly candidates: readonly SolutionCandidate[];
 }
 
-export interface JevRerankResult {
+export interface DecisionRerankResult {
   readonly model: string;
   readonly judgments: readonly {
     readonly solutionKey: string;
@@ -59,8 +60,8 @@ export interface JevRerankResult {
   }[];
 }
 
-export interface JevReranker {
-  readonly evaluate: (input: JevRerankInput) => Promise<JevRerankResult>;
+export interface DecisionReranker {
+  readonly evaluate: (input: DecisionRerankInput) => Promise<DecisionRerankResult>;
 }
 
 interface ProviderRun extends ProviderStatus {
@@ -91,14 +92,17 @@ export async function discoverSolutions(
   const ruleCandidates = groupSolutions(ranked, options.now, scored);
   let candidates = ruleCandidates;
   let reranking: NonNullable<DiscoveryResult['reranking']> = {
-    provider: 'jev', state: 'disabled', evaluatedCount: 0,
+    provider: 'none', state: 'disabled', evaluatedCount: 0,
   };
 
-  if (request.reranker === 'jev') {
+  if (request.reranker) {
+    const provider: RerankerProvider = request.reranker;
+    const providerName = provider === 'jev' ? 'Jev' : 'Laya';
     if (request.mode === 'mock') {
-      reranking = { provider: 'jev', state: 'skipped', evaluatedCount: 0, message: 'Jev is unavailable in mock mode.' };
+      reranking = { provider, state: 'skipped', evaluatedCount: 0, message: `${providerName} is unavailable in mock mode.` };
     } else if (!options.reranker) {
-      reranking = { provider: 'jev', state: 'skipped', evaluatedCount: 0, message: 'TYPESAFE_API_KEY is not configured; rule ranking was retained.' };
+      reranking = { provider, state: 'skipped', evaluatedCount: 0,
+        message: provider === 'jev' ? 'TYPESAFE_API_KEY is not configured; rule ranking was retained.' : 'Laya reranker is not configured; rule ranking was retained.' };
     } else {
       const shortlistSize = Math.min(30, Math.max(request.maxResults, request.maxResults * 3));
       const shortlist = groupSolutions(
@@ -118,14 +122,16 @@ export async function discoverSolutions(
           item.relevanceProbability < 0 || item.relevanceProbability > 1 ||
           item.compatibilityProbability < 0 || item.compatibilityProbability > 1 ||
           item.evidenceProbability < 0 || item.evidenceProbability > 1)) {
-          throw new Error('Incomplete Jev judgments.');
+          throw new Error('Incomplete reranker judgments.');
         }
-        const jevOrdered = shortlist.map((candidate) => {
+        const decisionOrdered = shortlist.map((candidate) => {
           const judgment = judgments.get(candidate.solutionKey);
-          if (!judgment) throw new Error('Missing Jev judgment.');
+          if (!judgment) throw new Error('Missing reranker judgment.');
           return {
             ...candidate,
-            jev: {
+            decision: {
+              provider,
+              model: judgment.model,
               relevanceProbability: judgment.relevanceProbability,
               compatibilityProbability: judgment.compatibilityProbability,
               evidenceProbability: judgment.evidenceProbability,
@@ -135,20 +141,31 @@ export async function discoverSolutions(
         }).sort((left, right) => {
           const blocked = Number(left.score.trustLevel === 'BLOCKED') - Number(right.score.trustLevel === 'BLOCKED');
           if (blocked !== 0) return blocked;
-          return (Math.min(right.jev.relevanceProbability, right.jev.compatibilityProbability) -
-            Math.min(left.jev.relevanceProbability, left.jev.compatibilityProbability)) ||
-            (right.jev.evidenceProbability - left.jev.evidenceProbability) ||
-            (left.jev.ruleRank - right.jev.ruleRank);
+          return (Math.min(right.decision.relevanceProbability, right.decision.compatibilityProbability) -
+            Math.min(left.decision.relevanceProbability, left.decision.compatibilityProbability)) ||
+            (right.decision.evidenceProbability - left.decision.evidenceProbability) ||
+            (left.decision.ruleRank - right.decision.ruleRank);
         });
         const evaluatedKeys = new Set(shortlist.map((candidate) => candidate.solutionKey));
-        const combined = [...jevOrdered, ...ruleCandidates.filter((candidate) => !evaluatedKeys.has(candidate.solutionKey))];
+        const ruleAnchorKey = provider === 'laya'
+          ? ruleCandidates.find((candidate) => candidate.score.trustLevel !== 'BLOCKED')?.solutionKey
+          : undefined;
+        const ruleAnchor = ruleAnchorKey
+          ? decisionOrdered.find((candidate) => candidate.solutionKey === ruleAnchorKey)
+          : undefined;
+        const combined = [
+          ...(ruleAnchor ? [ruleAnchor] : []),
+          ...decisionOrdered.filter((candidate) => candidate.solutionKey !== ruleAnchorKey),
+          ...ruleCandidates.filter((candidate) => !evaluatedKeys.has(candidate.solutionKey)),
+        ];
         candidates = [...combined.filter((candidate) => candidate.score.trustLevel !== 'BLOCKED'),
           ...combined.filter((candidate) => candidate.score.trustLevel === 'BLOCKED')]
           .slice(0, request.maxResults)
           .map((candidate, index) => ({ ...candidate, rank: index + 1 }));
-        reranking = { provider: 'jev', state: 'complete', model: evaluated.model, evaluatedCount: shortlist.length };
+        reranking = { provider, state: 'complete', model: evaluated.model, evaluatedCount: shortlist.length,
+          strategy: provider === 'laya' ? 'rule-anchor' : 'model-order' };
       } catch {
-        reranking = { provider: 'jev', state: 'failed', evaluatedCount: 0, message: 'Jev reranking failed; rule ranking was retained.' };
+        reranking = { provider, state: 'failed', evaluatedCount: 0, message: `${providerName} reranking failed; rule ranking was retained.` };
       }
     }
   }
@@ -178,7 +195,7 @@ function createHandoff(candidates: readonly SolutionCandidate[]): readonly Hando
       name: candidate.name,
       ruleScore: candidate.score.displayTotal,
       sourceUrls: candidate.evidence.map((item) => item.sourceUrl),
-      ...(candidate.jev ? { jev: candidate.jev } : {}),
+      ...(candidate.decision ? { decision: candidate.decision } : {}),
     }));
 }
 
