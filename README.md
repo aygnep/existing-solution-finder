@@ -31,7 +31,7 @@ fixseek --json --stack "Vite,Node.js" "module not found after pnpm install"
 
 `complete`, `partial`, `empty`, `skipped`, and `failed` remain distinct in JSON.
 For example, `partial` keeps results from successful queries while showing that
-other queries failed. The agent JSON envelope is schema version `1.1`. See the [Codex skill](skills/fixseek/SKILL.md) for a
+other queries failed. The agent JSON envelope is schema version `1.2`. See the [Codex skill](skills/fixseek/SKILL.md) for a
 reusable agent workflow.
 
 ```mermaid
@@ -48,7 +48,7 @@ flowchart LR
 npm install -g fixseek
 ```
 
-The npm registry currently serves the stable 0.1.0 release. The 0.2.0 beta
+The npm registry currently serves the stable 0.1.0 release. The 0.3.0 beta
 changes in this repository can be built locally with `npm install && npm run build`.
 
 ## Quick Start
@@ -96,6 +96,9 @@ fixseek --provider web "vite module not found"
 fixseek --json --stack "Vite,Node.js" \
   --constraints "no dependency upgrade" "vite module not found"
 
+# Optional Jev reranking and a short agent handoff
+fixseek --json --reranker jev "vite module not found after pnpm install"
+
 # Chinese output
 fixseek --lang zh "reasoning_content 报错"
 
@@ -106,8 +109,29 @@ fixseek --max-results 5 "npm package ESM CommonJS error"
 Supported providers are `github`, `web`, and `npm`. GitHub searches require
 `GITHUB_TOKEN`, web searches require `WEB_SEARCH_API_KEY`, and npm searches do
 not require a token. The default mode attempts every provider and preserves
-each provider's `complete`, `empty`, `skipped`, or `failed` state. `--real`
+each provider's `complete`, `partial`, `empty`, `skipped`, or `failed` state. `--real`
 remains accepted as an explicit compatibility flag.
+
+### Optional Jev handoff
+
+Set `TYPESAFE_API_KEY` and opt in with `--reranker jev` or the Web checkbox.
+Fixseek sends the problem, stack, constraints, and bounded source excerpts to
+TypeSafe AI. Jev evaluates a wider shortlist before the final result limit;
+the output keeps the original rule score and adds per-candidate relevance,
+compatibility, and evidence probabilities. The weakest of relevance and
+compatibility drives the Jev ordering, followed by evidence. `result.handoff` contains up to three non-blocked
+candidates with source URLs for agent review. A probability is a ranking signal,
+not proof that a fix works or is safe.
+
+If the key is absent, mock mode is active, or Jev fails, `result.reranking`
+reports `skipped` or `failed` and the handoff uses the existing rule order. No
+Jev request occurs unless explicitly selected. The default model is pinned to
+`jev-1.13.0`; set `JEV_MODEL` to change it. This integration follows TypeSafe's
+[Noul API](https://docs.typesafe.ai/api) and
+[reranking pattern](https://docs.typesafe.ai/cookbooks/rerank_typesafe).
+TypeSafe notes that Jev is strongest in English and needs workload-specific
+testing for CJK input. Live Jev ranking has not been verified for this beta
+because a TypeSafe API key was unavailable during development.
 
 ### Advanced Options
 
@@ -155,6 +179,8 @@ loads the first available values from the current directory's `.env` and then
 | `GITHUB_TOKEN` | GitHub token for `--provider github`. Not needed in mock mode. |
 | `WEB_SEARCH_PROVIDER` | Optional web search provider: `brave` or `serpapi`; defaults to `brave`. |
 | `WEB_SEARCH_API_KEY` | API key for the configured web search provider. |
+| `TYPESAFE_API_KEY` | Optional TypeSafe key for explicit Jev reranking. Never sent to the browser. |
+| `JEV_MODEL` | Optional model ID; defaults to `jev-1.13.0`. |
 | `FIXSEEK_ENV_FILE` | Optional explicit environment-file path. |
 | `FIXSEEK_OUTCOME_FILE` | Optional outcome JSONL path; defaults to `~/.config/fixseek/outcomes.jsonl`. |
 | `LOG_LEVEL` | `debug`, `info`, `warn`, or `error`. Default: `warn`. |

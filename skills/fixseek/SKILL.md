@@ -27,6 +27,8 @@ Read every `result.providerStatus` before interpreting candidates:
 
 Do not describe `partial`, `skipped`, or `failed` as a clean empty search. When two independent sources are available, open both and check the original claim, versions, dates, license, maintainer confirmation, and fit to the active project. If only one source exists, state that evidence limit.
 
+For an explicitly requested Jev-assisted handoff, run `fixseek --json --reranker jev "problem"`. This sends the problem and bounded source excerpts to TypeSafe AI only when `TYPESAFE_API_KEY` is configured. Read `result.reranking` before using `result.handoff`; `skipped` and `failed` mean the handoff followed the local rule order. Jev's Noul probabilities are relevance signals, not verified fix probabilities. Keep provider gaps, original rule scores, and safety warnings visible when presenting the handoff.
+
 ## Network fallback
 
 Try the CLI directly when it can reach providers. If the calling environment cannot reach the host VPN/TUN network, use the loopback gateway only when a host-side connector can reach it. See `docs/FIXSEEK_HOST_GATEWAY.md` in the Fixseek repository for its request contract. A loopback listener alone does not bridge a sandbox. Check `/health` before use; ask for authorization before starting a persistent listener that is not already running. Keep it bound to `127.0.0.1` and inspect provider states in every response.

@@ -47,4 +47,18 @@ describe('solution exporters', () => {
     expect(markdown).toContain('验证步骤');
     expect(markdown).toContain('Evidence');
   });
+
+  it('labels Jev judgments separately from the rule score in handoff exports', () => {
+    const markdown = renderSolutionReport({
+      request: { ...request, reranker: 'jev' },
+      candidates: [{ ...solution, jev: { relevanceProbability: 0.84, compatibilityProbability: 0.81, evidenceProbability: 0.72, ruleRank: 2 } }],
+      reranking: { provider: 'jev', state: 'complete', model: 'jev-1.13.0', evaluatedCount: 3 },
+    });
+
+    expect(markdown).toContain('Jev reranking: complete (jev-1.13.0)');
+    expect(markdown).toContain('Rule score: 0/100');
+    expect(markdown).toContain('Relevance probability: 0.840');
+    expect(markdown).toContain('Compatibility probability: 0.810');
+    expect(markdown).toContain('Evidence probability: 0.720');
+  });
 });

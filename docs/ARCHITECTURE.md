@@ -8,7 +8,8 @@ CLI or local Web UI
 DiscoveryRequest
         ↓
 discovery-service
-parse → query plan → provider runs → score → group keys → rank groups → evidence → validation
+parse → query plan → provider runs → score → group keys → rule shortlist
+  → optional Jev Noul rerank → final candidates and short handoff
         ↓
 DiscoveryResult
   ├─ CLI summarizer
@@ -33,6 +34,7 @@ scoring or safety behavior.
 | Trust | scorer.ts, ranker.ts | Deterministic fit, maintenance, safety penalties, order, explanation |
 | Evidence | solution-grouper.ts, validation-guidance.ts | Group repository evidence before the result limit while keeping npm packages distinct; retain source evidence and non-executing validation |
 | Providers | src/providers/ | External I/O and mock or real provider factory |
+| Jev | src/providers/jev-reranker.ts | Optional TypeSafe HTTP calls over bounded, redacted candidate evidence |
 | Feedback | src/feedback/ | Problem fingerprints and redacted useful / not-useful / unsafe JSONL outcomes |
 | Web | src/web/gateway.ts, web/src/ | Local credential boundary and session-only React workflow |
 | Exports | src/exports/solution-report.ts | Sourced report and agent-skill draft |
@@ -51,6 +53,14 @@ Agent JSON output retains the request, search plan, provider states, evidence,
 warnings, provider-native provenance, and validation steps. It does not make an
 implementation decision: the calling agent verifies sources and proposes the
 change.
+
+Jev is explicit opt-in. It evaluates a wider rule shortlist using three atomic
+Noul questions per candidate, then orders the final candidates by the weaker
+of relevance and compatibility followed by evidence probability, while leaving blocked candidates last. The top three
+non-blocked candidates form the agent handoff. If Jev is unavailable or any
+response is invalid, the entire rerank falls back to rule order. The browser
+never receives `TYPESAFE_API_KEY`; opt-in sends the problem and bounded source
+text to TypeSafe AI from the CLI or loopback gateway.
 
 ## Outcome Feedback
 

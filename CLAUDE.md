@@ -22,6 +22,10 @@ available, and do not equate a score with proof. The calling agent must infer
 the fix and validate it. Unknown result-derived commands and materially risky
 actions require approval; ordinary edits follow the user's existing authorization.
 
+Jev reranking is opt-in with `--reranker jev` and requires `TYPESAFE_API_KEY`.
+Read `result.reranking` and `result.handoff`; a skipped or failed rerank uses
+the rule order. Jev probabilities are relevance signals, not validation.
+
 After testing, record `useful`, `not-useful`, or `unsafe` with `fixseek
 feedback`. If validation fails, include the attempted fix and new error in the
 next context and search again. If no candidates are found, proceed with normal
@@ -43,7 +47,7 @@ npm run web:dev      # Local Web Solution Guide
 ## Architecture
 
 Shared discovery pipeline: input → parse → query → search → score → group →
-rank → validation → DiscoveryResult. The CLI and local Web Solution Guide are
+rule shortlist → optional Jev rerank → handoff → DiscoveryResult. The CLI and local Web Solution Guide are
 two renderers of this core.
 
 Key directories:

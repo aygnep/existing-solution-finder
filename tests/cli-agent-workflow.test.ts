@@ -45,6 +45,29 @@ afterEach(async () => {
 });
 
 describe('Fixseek agent-first CLI workflow', () => {
+  it('exposes an opt-in Jev handoff with a visible mock-mode fallback', async () => {
+    const { io, stdout } = makeIo();
+    const code = await runSolve(['reasoning_content error with Claude Code'], {
+      mock: true, json: true, reranker: 'jev', maxResults: '5', logLevel: 'warn', lang: 'en',
+    }, io);
+
+    expect(code).toBe(0);
+    const envelope = JSON.parse(stdout.text());
+    expect(envelope.invocation.reranker).toBe('jev');
+    expect(envelope.result.reranking.state).toBe('skipped');
+    expect(envelope.result.handoff.length).toBeGreaterThan(0);
+    expect(envelope.result.handoff.every((item: { sourceUrls: string[] }) => item.sourceUrls.length > 0)).toBe(true);
+  });
+
+  it('rejects an unknown reranker before making a search request', async () => {
+    const { io, stdout } = makeIo();
+    const code = await runSolve(['vite error'], {
+      mock: true, json: true, reranker: 'unknown', maxResults: '5', logLevel: 'warn', lang: 'en',
+    }, io);
+    expect(code).toBe(1);
+    expect(JSON.parse(stdout.text()).error.code).toBe('unsupported_reranker');
+  });
+
   it('uses real providers by default while accepting explicit --real', async () => {
     process.env.GITHUB_TOKEN = '';
 
@@ -108,7 +131,7 @@ describe('Fixseek agent-first CLI workflow', () => {
 
     expect(code).toBe(1);
     expect(JSON.parse(stdout.text())).toMatchObject({
-      schemaVersion: '1.1',
+      schemaVersion: '1.2',
       kind: 'fixseek.error',
       ok: false,
       error: { code: 'conflicting_modes' },
@@ -133,7 +156,7 @@ describe('Fixseek agent-first CLI workflow', () => {
     expect(code).toBe(0);
     const envelope = JSON.parse(stdout.text());
     expect(envelope).toMatchObject({
-      schemaVersion: '1.1',
+      schemaVersion: '1.2',
       kind: 'fixseek.discovery',
       ok: true,
       invocation: {

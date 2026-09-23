@@ -18,7 +18,7 @@ Agent 可以在选依赖或写 workaround 前运行 `fixseek --json`。结果包
 fixseek --json --stack "Vite,Node.js" "pnpm 安装后模块找不到"
 ```
 
-JSON 会区分 `complete`、`partial`、`empty`、`skipped` 和 `failed`；`partial` 表示保留了成功查询的结果，同时有其他查询失败。Agent JSON 封装版本为 `1.1`。可复用的说明见 [Codex Skill](skills/fixseek/SKILL.md)。
+JSON 会区分 `complete`、`partial`、`empty`、`skipped` 和 `failed`；`partial` 表示保留了成功查询的结果，同时有其他查询失败。Agent JSON 封装版本为 `1.2`。可复用的说明见 [Codex Skill](skills/fixseek/SKILL.md)。
 
 ## 适合什么场景？
 
@@ -35,7 +35,7 @@ JSON 会区分 `complete`、`partial`、`empty`、`skipped` 和 `failed`；`part
 npm install -g fixseek
 ```
 
-npm 仓库目前提供稳定版 0.1.0。本仓库中的 0.2.0 beta 改动可用 `npm install && npm run build` 在本地构建。
+npm 仓库目前提供稳定版 0.1.0。本仓库中的 0.3.0 beta 改动可用 `npm install && npm run build` 在本地构建。
 
 ## 快速开始
 
@@ -75,12 +75,23 @@ fixseek --provider web "vite module not found"
 fixseek --json --stack "Vite,Node.js" \
   --constraints "不能升级依赖" "vite module not found"
 
+# 可选：用 Jev 重排交接候选
+fixseek --json --reranker jev "pnpm 安装后 Vite 找不到模块"
+
 # 中文输出
 fixseek --lang zh "reasoning_content 报错"
 
 # 限制结果数量
 fixseek --max-results 5 "npm package ESM CommonJS error"
 ```
+
+### 可选 Jev 交接
+
+在本机 `.env` 配置 `TYPESAFE_API_KEY` 后，用 `--reranker jev` 或 Web 界面的复选框显式开启。Fixseek 会把问题、技术栈、约束和截短的来源摘录发送给 TypeSafe AI，让 Jev 在较宽的候选池上分别判断症状相关性、约束兼容性和证据充分性，再输出少量交接候选。排序先看相关性与兼容性中较弱的一项，再看证据概率。`result.handoff` 最多包含 3 个非阻断候选及其来源链接；规则分数和风险提示仍保留。Jev 返回的概率只是排序信号，不证明方案有效。
+
+没有 Key、处于 mock 模式或 API 调用失败时，`result.reranking` 会标为 `skipped` 或 `failed`，并回退到原有规则排序。默认模型固定为 `jev-1.13.0`，可用 `JEV_MODEL` 修改；未显式开启时不会调用 Jev。参见 TypeSafe 的 [API 文档](https://docs.typesafe.ai/api)。
+
+TypeSafe 官方说明 Jev 的英文任务表现目前更强，中文输入需要单独评估。本 beta 开发时没有可用的 TypeSafe API Key，因此完成的是离线接口、回退和界面验证，尚未验证真实 Jev 重排的质量。
 
 ### 高级选项
 
@@ -121,6 +132,8 @@ Fixseek 依次读取当前目录的 `.env` 和 `~/.config/fixseek/.env`，已经
 - `GITHUB_TOKEN`: GitHub 搜索需要；mock 模式不需要。
 - `WEB_SEARCH_PROVIDER`: 可选 web 搜索 provider，支持 `brave` 或 `serpapi`，默认 `brave`。
 - `WEB_SEARCH_API_KEY`: web 搜索 provider 的 API key。
+- `TYPESAFE_API_KEY`: 可选，仅显式开启 Jev 重排时使用；不会发送到浏览器。
+- `JEV_MODEL`: 可选，默认 `jev-1.13.0`。
 - `FIXSEEK_ENV_FILE`: 可选，显式指定环境变量文件。
 - `FIXSEEK_OUTCOME_FILE`: 可选，反馈 JSONL 路径；默认是 `~/.config/fixseek/outcomes.jsonl`。
 - `LOG_LEVEL`: `debug`、`info`、`warn`、`error`，默认 `warn`。

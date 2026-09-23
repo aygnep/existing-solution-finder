@@ -46,6 +46,10 @@ authorized worker is available.
    ```bash
    fixseek --json --context-file ./fixseek-context.json
    ```
+   If the user explicitly wants Jev-assisted ranking and a TypeSafe key is
+   configured, add `--reranker jev`. Inspect `result.reranking` and
+   `result.handoff`; a skipped or failed rerank retains the rule order.
+   Jev probabilities do not replace source verification or safety warnings.
 3. **Check provider health**
    - Distinguish `complete`, `partial`, `empty`, `skipped`, and `failed`.
    - `partial` retains successful results but signals incomplete query coverage.

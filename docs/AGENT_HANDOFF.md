@@ -4,7 +4,13 @@ Updated: 2026-09-23
 
 ## Current State
 
-- GitHub beta 0.2.0 adds Chinese query fallback, per-query partial provider
+- The 0.3.0 beta adds explicit opt-in Jev reranking for CLI and Web, with a
+  source-linked top-three handoff and rule-order fallback. Agent JSON schema is
+  1.2. No TypeSafe key was available during development; the adapter and
+  fallback were tested with deterministic responses, but live Jev quality is
+  unverified.
+
+- GitHub beta 0.2.0 added Chinese query fallback, per-query partial provider
   results, source-URL-safe JSON redaction, grouping before Top N with distinct
   npm packages, and conservative trust labels. Agent JSON schema is 1.1.
 - The real benchmark now fails conclusively on relevance misses. The latest
@@ -62,11 +68,11 @@ integration into developer workflows rather than a one-off result list.
 
 ## Verification
 
-- `npm test -- --runInBand --silent`: 26 suites and 238 tests passed.
+- `npm test -- --runInBand --silent`: 27 suites and 251 tests passed.
 - `npm run typecheck`: passed.
 - `npm run build`: passed, including the Web bundle.
 - `npm run lint`: passed.
-- `npx playwright test e2e/solution-guide.spec.ts`: deterministic Web flow
+- `npx playwright test e2e/solution-guide.spec.ts`: two deterministic Web flows
   passed; the external-provider smoke test is opt-in with `FIXSEEK_REAL_E2E=1`
   and has its own provider-aligned timeout.
 - `git diff --check`: passed.
