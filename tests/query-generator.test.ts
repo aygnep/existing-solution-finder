@@ -153,3 +153,11 @@ describe('generateQueries', () => {
     });
   });
 });
+
+  it('preserves SSR interop intent before generic package queries', () => {
+    const queries = generateQueries(parseProblem('Vite package ESM CommonJS interop during SSR'));
+    const npmQueries = queries.filter((query) => query.providers.includes('npm'));
+    expect(npmQueries[0]?.text).toBe('vite cjs interop');
+    expect(npmQueries.map((query) => query.text)).toContain('vite ssr commonjs interop');
+    expect(npmQueries.map((query) => query.text)).toContain('commonjs interop');
+  });

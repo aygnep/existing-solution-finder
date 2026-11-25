@@ -1,8 +1,52 @@
 # Agent Handoff — Short-Term Memory
 
-Updated: 2026-09-23
+Updated: 2026-09-30
 
-## Current State
+## P0 local product delivery
+
+- Node.js >=22.12 is now declared; `.nvmrc` selects Node 22. Fastify 5 and
+  patched transitive dependencies replace the vulnerable production tree.
+  Vite 7 and compatible plugin updates also clear the development audit.
+- Shared input redaction runs before parse/query/provider calls; CLI, Web,
+  provider excerpts, reranking and report/skill exports use the same module.
+  Dates and boolean risk flags survive sanitation. Regression fixtures use
+  synthetic credentials, authentication headers and quoted secret phrases.
+- `fixseek doctor` checks runtime/configuration offline without printing keys.
+  `fixseek-web` serves compiled UI and API on loopback port 4174. Host and
+  browser Origin checks reject non-local requests. The npm archive now includes
+  UI, skill, empty env template and installation guides.
+- `scripts/verify-package.mjs` verifies an isolated production-only archive
+  installation and terminates its gateway. It passed on Node 22.23.3.
+- Interop queries retain technical intent, stack matching avoids Go substrings,
+  and framework/runtime versions are extracted. Scoring gives explicit module
+  interop evidence more weight. These changes do not certify compatibility.
+- The separate real rules report is `benchmark-reports/p0-rule-run.json`
+  (ignored, local review artifact). On 2026-09-30 GitHub/npm completed all five
+  required-provider cases; optional Web was disabled to avoid paid calls.
+  Top-3 approved-match rate was 2/5, no-result rate 0/5, mean latency 6058.6 ms.
+  Three cases still failed: OpenCode bridge, Vite SSR interop, Vite resolution.
+  Approved matching is retrieval relevance, not demonstrated usefulness.
+  Historical `benchmarks/baseline.json` and case matchers remain unchanged.
+- The benchmark now reports Top-3 approved matching, no-result rate and latency;
+  a completed empty provider response is a conclusive relevance miss.
+  Jev/Laya comparisons and broader reviewed real samples remain open.
+- See [Local installation](LOCAL_INSTALL.md) for package and skill operation.
+  No publishing, deployment, listing or paid service activation was performed.
+
+## P0 verification
+
+- Clean `npm ci --ignore-scripts` succeeded. Full and production npm audits
+  report 0 vulnerabilities as of 2026-09-30; this is a dependency audit result.
+- Jest: 27 suites / 270 tests passed; lint, typecheck and build passed.
+- Production Playwright flow: 4 passed, 1 optional real-provider smoke skipped.
+- Isolated archive install passed on Node 22.23.3 with 169 package files,
+  production dependencies only, CLI/configuration/Web/API/redaction/skill checks.
+- `git diff --check` passed. No provider credentials or real `.env` files added.
+- Real GitHub/npm benchmark exited 2 (quality failure), separately from passing
+  implementation checks. Hosted Jev, local Laya comparison and paid web search
+  were not exercised in this round.
+
+## Previous beta state
 
 - The 0.4.0 beta adds a separate local Laya reranker. A loopback Laya 0.3.9
   service was tested on Apple Silicon with English and Chinese requests; the
@@ -34,8 +78,8 @@ Updated: 2026-09-23
   concurrency, request coalescing, and a 60-second successful-response cache.
 - `fixseek feedback` records explicit useful / not-useful / unsafe outcomes as
   redacted local JSONL.
-- Run local Web with npm run build && npm run web:dev, then open
-  http://127.0.0.1:5173.
+- Run local Web with npm run build && npm run web:start, then open
+  http://127.0.0.1:4174.
 - Browser requests go to Fastify on port 4174 and return DiscoveryResult.
 - The Web Solution Guide is a dark responsive workbench and sends real-mode
   requests by default. Its Chinese / EN switch re-renders generated text and
@@ -72,7 +116,7 @@ integration into developer workflows rather than a one-off result list.
 4. Use reviewed local outcomes as an explicit benchmark/ranking input and add
    equivalent feedback controls to the Web Guide.
 
-## Verification
+## Previous beta verification
 
 - `npm test -- --runInBand --silent`: 27 suites and 259 tests passed.
 - `npm run typecheck`: passed.

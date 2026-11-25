@@ -80,7 +80,10 @@ ranking yet. `FIXSEEK_OUTCOME_FILE` can override the default
 
 ## Local Web Runtime
 
-React/Vite listens on 127.0.0.1:5173. Fastify listens on 127.0.0.1:4174.
+Production Fastify serves the compiled React UI and API on 127.0.0.1:4174.
+Development Vite uses 127.0.0.1:5173 with an API proxy.
+Input redaction happens before parsing and query generation; provider text is
+redacted before scoring/reranking and outputs are sanitized before export.
 The browser never receives provider keys or persistent storage.
 
 ## Invariants

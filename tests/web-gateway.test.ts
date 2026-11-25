@@ -74,3 +74,32 @@ describe('web gateway', () => {
     await app.close();
   });
 });
+
+  it('redacts input before discovery and output before returning it', async () => {
+    const secret = 'ghp_fakeCredential123456789';
+    const discover = jest.fn(async () => ({ ...fixtureResult,
+      request: { ...fixtureResult.request, problem: `token=${secret}` },
+    }));
+    const app = createGateway({ discover });
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/discover',
+        payload: { ...fixtureRequest, problem: `Vite error token=${secret}`,
+          stack: [`Node.js api_key=${secret}`], constraints: [`password=${secret}`] } });
+      expect(response.statusCode).toBe(200);
+      expect(JSON.stringify(discover.mock.calls)).not.toContain(secret);
+      expect(response.body).not.toContain(secret);
+    } finally { await app.close(); }
+  });
+
+  it.each([
+    { host: 'attacker.example' },
+    { host: '127.0.0.1:4174', origin: 'https://attacker.example' },
+  ])('rejects non-local hosts and browser origins %j', async (headers) => {
+    const discover = jest.fn(async () => fixtureResult);
+    const app = createGateway({ discover });
+    try {
+      const response = await app.inject({ method: 'POST', url: '/api/discover', headers, payload: fixtureRequest });
+      expect(response.statusCode).toBe(403);
+      expect(discover).not.toHaveBeenCalled();
+    } finally { await app.close(); }
+  });

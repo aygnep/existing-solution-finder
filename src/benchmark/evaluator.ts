@@ -1,3 +1,4 @@
+import { redactSensitiveText } from '../feedback/redaction.js';
 import type { DiscoveryResult } from '../types/discovery.js';
 import type {
   BenchmarkCandidateRecord,
@@ -40,7 +41,7 @@ export function evaluateCase(
   );
   const providers = result.providerStatus.map((status) => ({
     ...status,
-    message: status.message === undefined ? undefined : redact(status.message),
+    message: status.message === undefined ? undefined : redactSensitiveText(status.message),
   }));
 
   const safetyPassed = candidates.every((candidate) =>
@@ -50,7 +51,8 @@ export function evaluateCase(
   return {
     id: benchmarkCase.id,
     requiredProviders: benchmarkCase.requiredProviders,
-    relevance: { passed: relevancePassed },
+    relevance: { passed: relevancePassed, top3ApprovedMatch: benchmarkCase.approvedCandidates.some((matcher) =>
+      candidates.slice(0, 3).some((candidate) => matchesCandidate(candidate, matcher))) },
     safety: { passed: safetyPassed },
     providerCoverage: {
       configured: benchmarkCase.providers.length,
@@ -85,17 +87,11 @@ function determineOutcome(
 ): BenchmarkOutcome {
   const providerIsUnavailable = benchmarkCase.requiredProviders.some((provider) => {
     const status = result.providerStatus.find((item) => item.provider === provider);
-    return status?.state !== 'complete' || status.resultCount === 0;
+    return status?.state !== 'complete' && status?.state !== 'empty';
   });
 
   if (providerIsUnavailable) return 'inconclusive';
   return relevancePassed && safetyPassed ? 'passed' : 'failed';
-}
-
-function redact(value: string): string {
-  return value
-    .replace(/ghp_[A-Za-z0-9_]+/g, '[REDACTED]')
-    .replace(/sk-[A-Za-z0-9_-]+/g, '[REDACTED]');
 }
 
 export function compareWithBaseline(
@@ -149,4 +145,23 @@ function requiredProviderCoverageRegressed(
       previousStatus.resultCount > 0 &&
       (nextStatus?.state !== 'complete' || nextStatus.resultCount === 0);
   });
+}
+
+/** Approved matches measure retrieval, not successful fixes or user-rated usefulness. */
+export function summarizeRun(report: BenchmarkRunReport): {
+  totalCases: number; conclusiveCases: number; top3ApprovedMatchRate: number | null;
+  noResultRate: number | null; meanElapsedMs: number | null;
+} {
+  const conclusive = report.cases.filter((item) => item.outcome !== 'inconclusive');
+  const measuredTop3 = conclusive.filter((item) => item.relevance.top3ApprovedMatch !== undefined);
+  return {
+    totalCases: report.cases.length,
+    conclusiveCases: conclusive.length,
+    top3ApprovedMatchRate: measuredTop3.length === 0 ? null :
+      measuredTop3.filter((item) => item.relevance.top3ApprovedMatch).length / measuredTop3.length,
+    noResultRate: conclusive.length === 0 ? null :
+      conclusive.filter((item) => item.candidates.length === 0).length / conclusive.length,
+    meanElapsedMs: report.cases.length === 0 ? null :
+      report.cases.reduce((sum, item) => sum + item.elapsedMs, 0) / report.cases.length,
+  };
 }

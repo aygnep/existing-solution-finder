@@ -29,12 +29,16 @@ This runs tests, typecheck, and build.
 ## 4. Inspect Package Contents
 
 ```bash
-npm publish --dry-run
+npm pack --dry-run --ignore-scripts
 ```
 
 Check that the package includes the expected files:
 
-- `dist`
+- `dist` (CLI and gateway)
+- `web/dist` (compiled UI)
+- `skills/fixseek`
+- `.env.example` (empty credential template)
+- `docs/LOCAL_INSTALL.md` and bundled operation guides
 - `README.md`
 - `README.zh-CN.md`
 - `LICENSE`
@@ -62,3 +66,7 @@ fixseek solve "npm package ESM CommonJS error"
 - Do not publish real `.env` files.
 - Do not publish tokens or private credentials.
 - Do not run `npm publish` as part of normal tests.
+
+Before any manual release, install the local tarball in an isolated directory
+with production dependencies only and verify `fixseek doctor`, mock JSON
+search, `fixseek-web`, `/health`, UI assets, and API responses.

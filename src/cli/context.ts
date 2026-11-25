@@ -1,3 +1,5 @@
+import { redactSensitiveText } from '../feedback/redaction.js';
+export { redactSensitiveText, sanitizeForOutput } from '../feedback/redaction.js';
 import { readFile } from 'node:fs/promises';
 
 export interface ContextFileInput {
@@ -89,26 +91,6 @@ export function mergeCliContext(options: MergeCliContextOptions): EffectiveCliCo
   };
 }
 
-export function redactSensitiveText(input: string): string {
-  return input
-    .replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*?-----END [^-]*PRIVATE KEY-----/gi, '[REDACTED]')
-    .replace(/\b(?:github_pat_|gh[pousr]_|npm_)[A-Za-z0-9_]{8,}\b/g, '[REDACTED]')
-    .replace(/\bsk-(?:proj-)?[A-Za-z0-9_-]{8,}\b/g, '[REDACTED]')
-    .replace(/\bAKIA[A-Z0-9]{16}\b/g, '[REDACTED]')
-    .replace(/\bxox[baprs]-[A-Za-z0-9-]{8,}\b/g, '[REDACTED]')
-    .replace(/\b(Bearer\s+)[^\s,;]{8,}/gi, '$1[REDACTED]')
-    .replace(
-      /(\b(?:api.?key|access.?token|refresh.?token|token|secret|password|passwd|credential|authorization|cookie|session(?:id)?|private.?key)\b\s*["']?\s*[:=]\s*["']?)([^"'\s,;}\]]+)/gi,
-      '$1[REDACTED]',
-    )
-    .replace(/([?&](?:api_?key|token|access_?token|secret|password)=)[^&#\s]+/gi, '$1[REDACTED]')
-    .replace(/(https?:\/\/)[^/@\s]+:[^/@\s]+@/gi, '$1[REDACTED]@');
-}
-
-export function sanitizeForOutput<T>(value: T): T {
-  return sanitizeOutputValue(value, '') as T;
-}
-
 function appendAgentContext(
   problem: string,
   attemptedFixes: readonly string[],
@@ -161,20 +143,6 @@ function sanitizeEnvironmentValue(value: unknown, depth: number): unknown {
     if (SENSITIVE_KEY.test(key)) continue;
     const item = sanitizeEnvironmentValue(value[key], depth + 1);
     if (item !== undefined) sanitized[key] = item;
-  }
-  return sanitized;
-}
-
-function sanitizeOutputValue(value: unknown, key: string): unknown {
-  if (SENSITIVE_KEY.test(key)) return '[REDACTED]';
-  if (typeof value === 'string') return redactSensitiveText(value);
-  if (value === null || typeof value !== 'object') return value;
-  if (value instanceof Date) return value.toISOString();
-  if (Array.isArray(value)) return value.map((item) => sanitizeOutputValue(item, ''));
-
-  const sanitized: Record<string, unknown> = {};
-  for (const [childKey, childValue] of Object.entries(value)) {
-    sanitized[childKey] = sanitizeOutputValue(childValue, childKey);
   }
   return sanitized;
 }

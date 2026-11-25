@@ -40,7 +40,7 @@ const ERROR_PATTERN =
 
 
 /** Matches version strings like "Node.js 20", "Go 1.22", "v3.4.1" */
-const VERSION_PATTERN = /(?:v\d+\.\d+(?:\.\d+)?|\b(?:node|go|python|ruby|java)\s+\d+(?:\.\d+)?)/gi;
+const VERSION_PATTERN = /(?:v\d+\.\d+(?:\.\d+)?|\b(?:node(?:\.js)?|go|python|ruby|java|vite|next(?:\.js)?)\s+\d+(?:\.\d+)?)/gi;
 
 /** Matches constraint phrases */
 const CONSTRAINT_PATTERN =
@@ -105,7 +105,7 @@ function extractStackNames(text: string): readonly string[] {
   const lower = text.toLowerCase();
 
   for (const tool of KNOWN_TOOLS) {
-    if (lower.includes(tool.toLowerCase())) {
+    if (new RegExp(`(?<![a-z0-9])${tool.toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?![a-z0-9])`).test(lower)) {
       found.push(tool);
     }
   }

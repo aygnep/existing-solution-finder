@@ -41,7 +41,7 @@ export interface BenchmarkCandidateRecord {
 export interface BenchmarkCaseReport {
   readonly id: string;
   readonly requiredProviders: readonly Provider[];
-  readonly relevance: { readonly passed: boolean };
+  readonly relevance: { readonly passed: boolean; readonly top3ApprovedMatch?: boolean };
   readonly safety: { readonly passed: boolean };
   readonly providerCoverage: {
     readonly configured: number;

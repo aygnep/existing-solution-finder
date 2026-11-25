@@ -133,6 +133,30 @@ export function createProgram(io: CliIo = defaultIo()): Command {
       );
     });
 
+  program.command('doctor')
+    .description('Check local runtime and provider configuration without making network requests.')
+    .action(() => {
+      try {
+        const env = loadEnv();
+        const supported = Number(process.versions.node.split('.')[0]) > 22 ||
+          (Number(process.versions.node.split('.')[0]) === 22 && Number(process.versions.node.split('.')[1]) >= 12);
+        io.stdout.write(JSON.stringify({
+          ok: supported,
+          node: process.versions.node,
+          minimumNode: '22.12',
+          providers: { npm: 'ready', github: env.GITHUB_TOKEN ? 'configured' : 'skipped',
+            web: env.WEB_SEARCH_API_KEY ? 'configured' : 'skipped' },
+          rerankers: { jev: env.TYPESAFE_API_KEY ? 'configured' : 'skipped', laya: 'requires local service' },
+          warnings: env.WEB_SEARCH_API_KEY && !env.WEB_SEARCH_PROVIDER
+            ? ['WEB_SEARCH_PROVIDER is not set; Brave is used by default.'] : [],
+        }, null, 2) + '\n');
+        process.exitCode = supported ? 0 : 1;
+      } catch {
+        io.stderr.write('Invalid environment configuration. Check the settings against .env.example.\n');
+        process.exitCode = 1;
+      }
+    });
+
   return program;
 }
 

@@ -118,7 +118,7 @@ describe('Fixseek CLI UX', () => {
 
   it('package bin points to fixseek', () => {
     expect(packageJson.name).toBe('fixseek');
-    expect(packageJson.bin).toEqual({ fixseek: 'dist/cli/index.js' });
+    expect(packageJson.bin).toEqual({ fixseek: 'dist/cli/index.js', 'fixseek-web': 'dist/web/gateway.js' });
   });
 
   it('includes GitHub issue candidates in real GitHub mode', async () => {

@@ -1,3 +1,4 @@
+import { summarizeRun } from '../src/benchmark/evaluator';
 import {
   compareWithBaseline,
   evaluateCase,
@@ -213,3 +214,20 @@ function runReport(
     }],
   };
 }
+
+  it('keeps unavailable-provider cases out of conclusive quality rates', () => {
+    expect(summarizeRun({ cases: [{ id: 'offline', requiredProviders: ['npm'],
+      relevance: { passed: false, top3ApprovedMatch: false }, safety: { passed: true },
+      providerCoverage: { configured: 1, completedWithResults: 0 }, outcome: 'inconclusive',
+      elapsedMs: 25, providers: [{ provider: 'npm', state: 'failed', resultCount: 0 }], candidates: [],
+    }] })).toEqual({ totalCases: 1, conclusiveCases: 0, top3ApprovedMatchRate: null,
+      noResultRate: null, meanElapsedMs: 25 });
+  });
+
+  it('counts a completed empty search as a conclusive relevance miss', () => {
+    const result = { ...resultWith(candidate(), { provider: 'github', state: 'empty' as const, resultCount: 0 }), candidates: [] };
+    const report = evaluateCase(benchmarkCase, result, 10);
+    expect(report.outcome).toBe('failed');
+    expect(summarizeRun({ cases: [report] }).noResultRate).toBe(1);
+    expect(summarizeRun({ cases: [report] }).top3ApprovedMatchRate).toBe(0);
+  });

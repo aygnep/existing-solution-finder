@@ -231,3 +231,27 @@ describe('discovery service', () => {
     expect(result.candidates[0]!.name).toBe('vite-helper');
   });
 });
+
+  it('redacts before provider and reranker calls while keeping dates and risk flags', async () => {
+    const secret = 'ghp_fakeCredential123456789';
+    const npm = jest.fn(async () => [{ ...npmCandidate,
+      description: `Vite helper token=${secret}`,
+      metadata: { ...npmCandidate.metadata, requiresSecretsTransmission: true },
+    }]);
+    const evaluate = jest.fn(async () => { throw new Error('offline'); });
+    const result = await discoverSolutions({
+      request: { problem: `Vite module error token=${secret}`, stack: [`api_key=${secret}`],
+        constraints: [], providers: ['npm'], mode: 'real', maxResults: 3, reranker: 'jev' },
+      searchers: { npm, github: async () => [], web: async () => [] },
+      reranker: { evaluate }, now: new Date('2026-09-30T00:00:00Z'),
+    });
+    expect(npm).toHaveBeenCalled();
+    expect(evaluate).toHaveBeenCalled();
+    expect(JSON.stringify(npm.mock.calls)).not.toContain(secret);
+    expect(JSON.stringify(evaluate.mock.calls)).not.toContain(secret);
+    expect(JSON.stringify(result)).not.toContain(secret);
+    expect(result.candidates[0]?.metadata.lastCommitDate).toBeInstanceOf(Date);
+    expect(result.candidates[0]?.metadata.requiresSecretsTransmission).toBe(true);
+    expect(result.candidates[0]?.score.trustLevel).toBe('BLOCKED');
+    expect(result.candidates[0]?.url).toBe(npmCandidate.url);
+  });

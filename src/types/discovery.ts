@@ -1,3 +1,4 @@
+import { redactSensitiveText } from '../feedback/redaction.js';
 import type { Provider, RawCandidate } from './candidate.js';
 import type { ParsedProblem } from './problem.js';
 import type { RankedCandidate } from './score.js';
@@ -96,8 +97,8 @@ export interface DiscoveryResult {
 export function buildDiscoveryRequest(input: DiscoveryRequest): DiscoveryRequest {
   return {
     ...input,
-    problem: input.problem.trim(),
-    stack: input.stack.map((item) => item.trim()).filter(Boolean),
-    constraints: input.constraints.map((item) => item.trim()).filter(Boolean),
+    problem: redactSensitiveText(input.problem.trim()),
+    stack: input.stack.map((item) => redactSensitiveText(item.trim())).filter(Boolean),
+    constraints: input.constraints.map((item) => redactSensitiveText(item.trim())).filter(Boolean),
   };
 }

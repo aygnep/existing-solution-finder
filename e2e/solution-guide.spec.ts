@@ -83,3 +83,19 @@ test('real-provider smoke returns provider state', async ({ page }) => {
   await expect(page.locator('[aria-label="Provider status"]')).toBeVisible({ timeout: 210_000 });
   await expect(page.getByText(/GitHub：/)).toBeVisible();
 });
+
+
+test('serves the production UI and runs the actual mock discovery API with redaction', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByLabel('Describe the problem')).toBeVisible();
+  const secret = 'ghp_fakeCredential123456789';
+  const response = await page.request.post('/api/discover', { data: {
+    problem: `reasoning_content error with Claude Code token=${secret}`, stack: [], constraints: [],
+    providers: ['github'], mode: 'mock', maxResults: 5,
+  } });
+  expect(response.ok()).toBe(true);
+  const body = await response.text();
+  expect(body).not.toContain(secret);
+  expect(body).toContain('[REDACTED]');
+  expect((await response.json()).candidates.length).toBeGreaterThan(0);
+});

@@ -44,12 +44,80 @@ flowchart LR
 
 ## Installation
 
+The current source version is **0.4.0-beta.1** and requires **Node.js 22.12 or
+newer** and npm. Basic search does not require Python, model weights, or a GPU.
+
+### Install this version from source
+
 ```bash
-npm install -g fixseek
+git clone https://github.com/aygnep/existing-solution-finder.git
+cd existing-solution-finder
+npm ci
+npm run build
+npm pack --ignore-scripts
+npm install -g ./fixseek-0.4.0-beta.1.tgz
+fixseek doctor
 ```
 
-The npm registry currently serves the stable 0.1.0 release. The 0.4.0 beta
-changes in this repository can be built locally with `npm install && npm run build`.
+To move this version to another computer, share the reviewed `.tgz` and run the
+last two commands there. The target needs Node.js, npm, and registry access to
+install production dependencies; it does not need the source checkout or build
+tools. `npm install -g fixseek` installs the npm-published version, which may
+differ from this source version.
+
+### Configure and check search
+
+`fixseek doctor` checks runtime and credential presence offline, without
+printing keys or testing connectivity. Start with a real search that needs no
+API key:
+
+```bash
+fixseek --provider npm --json "Vite ESM CommonJS SSR interop"
+```
+
+For GitHub and web search, copy `.env.example` to `~/.config/fixseek/.env` and
+fill in your own credentials. GitHub needs `GITHUB_TOKEN`; web needs
+`WEB_SEARCH_API_KEY` for Brave (default) or SerpAPI. Missing credentials cause
+that provider to be skipped. Do not share your `.env`, tokens, or local logs.
+Network restrictions in an agent sandbox or a proxy can prevent otherwise
+configured providers from working; inspect every `result.providerStatus`.
+
+The package also includes the Web UI and agent skill:
+
+- Run `fixseek-web`, then open <http://127.0.0.1:4174>. Stop with Ctrl+C.
+- Copy the bundled `skills/fixseek` directory into your agent's skill directory
+  (for Codex, `~/.codex/skills/fixseek`), reviewing an existing copy before
+  replacement. Keep the CLI on PATH and reload the agent.
+
+See [Local installation](docs/LOCAL_INSTALL.md) for configuration precedence,
+package verification, and optional model services. macOS, Linux, and Windows
+are expected to support the basic Node.js runtime; this is not a claim of
+completed testing on all three platforms. Source commands above use a POSIX shell.
+
+## How it works
+
+1. Accept a problem, error log, or context file; redact recognized credential
+   patterns before generating queries.
+2. Extract error tokens, known stack names, versions, and keywords using rules
+   and text segmentation. Generate exact-error, compatibility, repository,
+   issue, and alternative-tool queries.
+3. Search GitHub, npm, and web APIs in parallel with bounded query concurrency,
+   timeouts, retries, and an in-process response cache. Enrich GitHub results
+   with README text and npm results with package metadata; web results carry
+   search snippets.
+4. Merge duplicate solutions and rank using error/stack matches, source
+   evidence, recency, installation clarity, and maintenance signals. Apply
+   penalties and warnings for concerns such as archived repositories or
+   suspicious install scripts.
+5. Return candidates, source URLs, score breakdowns, a short handoff, and each
+   provider's status in CLI/JSON or the local Web UI.
+
+Query generation and default ranking use local rules. Jev cloud reranking and
+the separately installed local Laya model are explicit opt-ins; failures retain
+rule ranking. Scores are retrieval signals, not verified fixes. The calling
+agent or developer reviews sources and validates changes. Local outcome
+feedback does not automatically train or change the ranker. Pattern-based
+redaction can miss secrets, so review logs before submitting them.
 
 ## Quick Start
 
@@ -261,6 +329,8 @@ npm install
 npm run build
 npm test
 npm run typecheck
+npm run lint
+npm run verify:package
 ```
 
 ### Real quality benchmark
@@ -297,10 +367,10 @@ Markdown report or agent-skill draft.
 ```bash
 npm install
 npm run build
-npm run web:dev
+npm run web:start
 ```
 
-Open <http://127.0.0.1:5173>. The local gateway listens on port 4174 and keeps
+Open <http://127.0.0.1:4174>. The local gateway listens on port 4174 and keeps
 provider credentials outside the browser. Web sessions are not persisted. The
 workbench defaults to real mode and keeps each provider's complete, empty,
 skipped, or failed state visible. The Chinese / EN selector immediately changes

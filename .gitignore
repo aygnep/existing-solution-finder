@@ -2,6 +2,9 @@ node_modules/
 .venv-laya/
 dist/
 .env
+.env.*
+!.env.example
+*.tgz
 *.js.map
 *.d.ts
 coverage/

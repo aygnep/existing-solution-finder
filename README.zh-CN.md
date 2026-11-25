@@ -31,11 +31,63 @@ JSON 会区分 `complete`、`partial`、`empty`、`skipped` 和 `failed`；`part
 
 ## 安装
 
+当前源码版本是 **0.4.0-beta.1**，需要 **Node.js 22.12 或更新版本**和 npm。
+基础搜索不需要 Python、模型权重或显卡。
+
+### 从源码安装当前版本
+
 ```bash
-npm install -g fixseek
+git clone https://github.com/aygnep/existing-solution-finder.git
+cd existing-solution-finder
+npm ci
+npm run build
+npm pack --ignore-scripts
+npm install -g ./fixseek-0.4.0-beta.1.tgz
+fixseek doctor
 ```
 
-npm 仓库目前提供稳定版 0.1.0。本仓库中的 0.4.0 beta 改动可用 `npm install && npm run build` 在本地构建。
+迁移到另一台电脑时，分享检查过的 `.tgz`，在目标电脑执行最后两条命令即可。
+目标电脑需要 Node.js、npm，以及安装生产依赖所需的 registry 网络访问；无需源码或构建工具。
+`npm install -g fixseek` 安装的是 npm 已发布版本，可能与当前源码版本不同。
+
+### 配置并检查搜索
+
+`fixseek doctor` 离线检查运行环境和凭据是否已配置，不打印密钥，也不测试联网。
+先用不需要 API Key 的真实搜索验证基本功能：
+
+```bash
+fixseek --provider npm --json "Vite ESM CommonJS SSR interop"
+```
+
+使用 GitHub 和 Web 搜索时，把 `.env.example` 复制到 `~/.config/fixseek/.env`，
+填写自己的凭据。GitHub 需要 `GITHUB_TOKEN`；Web 需要 Brave（默认）或 SerpAPI
+的 `WEB_SEARCH_API_KEY`。缺少凭据的来源会显示为跳过。
+不要分享自己的 `.env`、Token 或本地日志。Agent 沙箱或代理的网络限制可能导致已配置的来源仍然连接失败，
+应逐项检查 `result.providerStatus`。
+
+安装包也包含 Web 界面和 Agent Skill：
+
+- 运行 `fixseek-web`，打开 <http://127.0.0.1:4174>；按 Ctrl+C 停止。
+- 把包内的 `skills/fixseek` 目录复制到 Agent 的技能目录（Codex 为
+  `~/.codex/skills/fixseek`），覆盖前检查已有版本。确保 CLI 在 PATH 中，并重新加载 Agent。
+
+配置优先级、安装包验证和可选模型服务见[安装说明](docs/LOCAL_INSTALL.md)。
+基础 Node.js 程序预计可在 macOS、Linux、Windows 上运行，但尚不能视为已完成三平台实测。
+上面的源码安装命令使用 POSIX shell。
+
+## 工作原理
+
+1. 接收问题、错误日志或上下文文件，在生成查询前脱敏可识别的凭据格式。
+2. 用规则和文本分词提取报错、已知技术栈、版本和关键词，组合精确报错、兼容性、仓库、Issue 和替代工具查询。
+3. 并行调用 GitHub、npm、Web API，限制查询并发，并提供超时、重试和进程内响应缓存。
+   GitHub 结果补充 README，npm 结果补充包元数据，Web 结果携带搜索摘要。
+4. 合并重复方案，按报错匹配、技术栈匹配、来源证据、更新时间、安装说明和维护情况打分。
+   归档仓库、可疑安装脚本等会产生扣分或警告。
+5. 通过 CLI/JSON 或本地 Web 界面输出候选方案、来源链接、评分明细、简短交接清单和各来源状态。
+
+查询生成和默认排序均使用本地规则。Jev 云端重排和另行安装的本地 Laya 模型需要显式开启，
+失败时保留规则排序。分数只是检索信号，方案仍需 Agent 或开发者核验来源、验证修改。
+本地反馈目前不会自动训练或改变排序。格式匹配脱敏可能漏掉秘密，提交日志前仍需检查。
 
 ## 快速开始
 
@@ -191,6 +243,8 @@ npm install
 npm run build
 npm test
 npm run typecheck
+npm run lint
+npm run verify:package
 ```
 
 ### Web 解决方案向导（本地预览）
@@ -200,10 +254,10 @@ npm run typecheck
 ```bash
 npm install
 npm run build
-npm run web:dev
+npm run web:start
 ```
 
-打开 <http://127.0.0.1:5173>。本地网关监听 4174 端口，provider 密钥始终留在浏览器之外；会话默认不会持久化。mock 模式确定且无需凭据，real 模式使用上文列出的环境变量。
+打开 <http://127.0.0.1:4174>。本地网关监听 4174 端口，provider 密钥始终留在浏览器之外；会话默认不会持久化。mock 模式确定且无需凭据，real 模式使用上文列出的环境变量。
 
 当前 GitHub 仓库仍是：
 [aygnep/existing-solution-finder](https://github.com/aygnep/existing-solution-finder)。
@@ -239,17 +293,17 @@ npm list -g fixseek
 如果安装成功但命令不可用，检查 npm global bin 目录是否在 `PATH` 中：
 
 ```bash
-npm bin -g
+npm prefix -g
 ```
 
-然后把输出目录加入 shell 的 `PATH`。
+macOS/Linux 把该目录下的 `bin` 加入 shell 的 `PATH`；Windows 通常直接使用输出目录。
 
 ## 安全边界
 
 - 不自动 clone 仓库。
 - 不自动运行 `npm install`。
 - 不执行未知脚本。
-- 不泄露 token。
+- 对常见凭据格式脱敏；提交日志前仍需检查。
 - 不保证搜索结果一定正确或安全。
 
 ## License

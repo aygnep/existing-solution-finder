@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { discoverSolutions, type DiscoverySearchers } from '../core/discovery-service.js';
 import { createDiscoverySearchers } from '../providers/discovery-searchers.js';
 import type { BenchmarkCase, BenchmarkComparison, BenchmarkRunReport } from './types.js';
-import { compareWithBaseline, evaluateCase, parseBenchmarkCases } from './evaluator.js';
+import { compareWithBaseline, evaluateCase, parseBenchmarkCases, summarizeRun } from './evaluator.js';
 
 const CASES_PATH = 'benchmarks/cases.json';
 const BASELINE_PATH = 'benchmarks/baseline.json';
@@ -40,7 +40,7 @@ export async function runBenchmark(
     ? comparisonWithoutBaseline(report)
     : compareWithBaseline(report, baseline);
 
-  io.writeStdout(JSON.stringify({ report, comparison }, null, 2) + '\n');
+  io.writeStdout(JSON.stringify({ report, comparison, summary: summarizeRun(report) }, null, 2) + '\n');
 
   if (updateBaseline) {
     if (comparison.outcome !== 'passed') {

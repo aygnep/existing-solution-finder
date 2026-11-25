@@ -89,6 +89,16 @@ function scoreExactErrorMatch(candidate: RawCandidate, problem: ParsedProblem): 
   if (matchedInTitle.length > 0) return 25;
   if (matchedInReadme.length > 0) return 15;
 
+  // Specific interoperability intent should outrank a generic runtime/package match.
+  // Use source text, never benchmark candidate identities.
+  if (/\binterop(?:erability)?\b/i.test(problem.raw) &&
+      /\b(?:module|esm|ecmascript|commonjs|cjs)\b/i.test(problem.raw)) {
+    const title = `${candidate.name} ${candidate.description}`.toLowerCase();
+    const moduleIntent = /\b(?:module|esm|ecmascript|commonjs|cjs)\b/;
+    if (/\binterop(?:erability)?\b/.test(title) && moduleIntent.test(title)) return 20;
+    if (/\binterop(?:erability)?\b/.test(searchable) && moduleIntent.test(searchable)) return 12;
+  }
+
   // Partial match — error class keyword found
   const hasRelatedKeyword = problem.keywords.some((k) => searchable.includes(k.toLowerCase()));
   if (hasRelatedKeyword) return 5;

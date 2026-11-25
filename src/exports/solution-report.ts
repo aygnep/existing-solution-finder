@@ -1,3 +1,4 @@
+import { sanitizeForOutput } from '../feedback/redaction.js';
 import type { DiscoveryRequest, RerankingStatus, SolutionCandidate } from '../types/discovery.js';
 import { formatMatchReason, formatSafetyWarning, formatValidationStep } from '../core/candidate-presentation.js';
 import type { Language } from '../i18n/types.js';
@@ -10,6 +11,7 @@ export interface SolutionExportInput {
 }
 
 export function renderSolutionReport(input: SolutionExportInput): string {
+  input = sanitizeForOutput(input);
   const language = input.language ?? 'en';
   const labels = language === 'zh'
     ? { title: '# Fixseek 解决方案报告', problem: '问题', sources: '来源', score: '规则分数', why: '匹配原因', evidence: '证据', warnings: '风险提示', validation: '验证步骤', reranking: '重排', relevance: '相关概率', compatibility: '兼容概率', evidenceProbability: '证据概率' }

@@ -98,3 +98,7 @@ Before implementation, the agent should report:
 
 Fixseek scores are retrieval signals, not proof. The agent must not present a
 high score as confirmation that a candidate solves the active problem.
+
+For packaged CLI/Web/Skill setup and offline configuration diagnosis, see
+[Local installation](LOCAL_INSTALL.md). Run `fixseek doctor` before live
+queries; provider presence does not establish credential validity.

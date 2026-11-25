@@ -185,6 +185,20 @@ function generateAlternativeQueries(problem: ParsedProblem): Query[] {
   const providers: Provider[] = ['github', 'web', 'npm'];
   const queries: Query[] = [];
 
+  // Keep the technical intent before generic words consume npm's small result budget.
+  // No approved package names are embedded in these queries.
+  if (/\b(?:interop|interoperability)\b/i.test(problem.raw) &&
+      /\b(?:esm|commonjs|ecmascript|module)\b/i.test(problem.raw)) {
+    const intent = /\b(?:commonjs|cjs)\b/i.test(problem.raw) ? 'commonjs interop' : 'module interop';
+    const framework = problem.stackNames.find((tool) => /^(?:Vite|Next\.js|Webpack)$/.test(tool));
+    if (framework && intent === 'commonjs interop') {
+      queries.push(makeQuery(`${framework.toLowerCase()} cjs interop`, 'alternatives', providers));
+    }
+    queries.push(makeQuery(`${framework ? `${framework.toLowerCase()} ` : ''}${/\bssr\b/i.test(problem.raw) ? 'ssr ' : ''}${intent}`,
+      'alternatives', providers));
+    queries.push(makeQuery(intent, 'alternatives', ['npm']));
+  }
+
   // Keyword-based broad search
   const keywords = problem.keywords.slice(0, 5).join(' ');
   if (keywords) {

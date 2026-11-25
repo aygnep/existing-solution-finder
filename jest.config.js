@@ -7,6 +7,8 @@ module.exports = {
       displayName: 'node',
       preset: 'ts-jest',
       testEnvironment: 'node',
+      transform: { '^.+\\.tsx?$': 'ts-jest', '^.+\\.js$': ['babel-jest', { plugins: ['@babel/plugin-transform-modules-commonjs'] }] },
+      transformIgnorePatterns: ['/node_modules/(?!content-disposition/)'],
       roots: ['<rootDir>/tests'],
       testMatch: ['**/*.test.ts'],
       moduleNameMapper,

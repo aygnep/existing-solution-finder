@@ -99,3 +99,9 @@ When two candidates have the same composite score:
 2. Then higher `stackMatch`.
 3. Then more recent last commit.
 4. Then alphabetical by repository name (deterministic).
+
+Explicit module interoperability intent receives 20 points in exactErrorMatch
+when both interop and module/ESM/CommonJS/CJS occur in a candidate title or
+description, or 12 when they only occur in source text. Exact error-token
+matches retain priority. This rule uses technical evidence, never approved
+benchmark package names. It is a fit heuristic, not proof of compatibility.

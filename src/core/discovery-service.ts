@@ -3,7 +3,7 @@ import { parseProblem } from './problem-parser.js';
 import { rankCandidates } from './ranker.js';
 import { scoreAndAttach } from './scorer.js';
 import { groupSolutions, solutionKeyFor } from './solution-grouper.js';
-import { redactSensitiveText } from '../feedback/redaction.js';
+import { redactSensitiveText, sanitizeForOutput } from '../feedback/redaction.js';
 import {
   buildDiscoveryRequest,
   type DiscoveryRequest,
@@ -212,15 +212,15 @@ async function runProvider(
     const result = await searchers[provider](queries);
     if (isStatusResult(result)) {
       if (result.state === 'partial') {
-        return { provider, state: 'partial', resultCount: result.raw.length, message: result.message, raw: result.raw };
+        return { provider, state: 'partial', resultCount: result.raw.length, message: result.message, raw: sanitizeForOutput(result.raw) };
       }
-      return { provider, state: 'skipped', resultCount: 0, message: result.message, raw: result.raw };
+      return { provider, state: 'skipped', resultCount: 0, message: result.message, raw: sanitizeForOutput(result.raw) };
     }
     return {
       provider,
       state: result.length === 0 ? 'empty' : 'complete',
       resultCount: result.length,
-      raw: result,
+      raw: sanitizeForOutput(result),
     };
   } catch (error) {
     return { provider, state: 'failed', resultCount: 0, message: safeMessage(error), raw: [] };

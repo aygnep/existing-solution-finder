@@ -22,8 +22,9 @@ The P2 agent-first workflow is implemented:
 The search-quality beta also preserves source URLs in JSON output, generates
 queries for Chinese-only input, retains results from partially failed provider
 runs, and treats a conclusive benchmark relevance miss as a failed quality gate.
-The most recent real run passed 1 of 5 relevance cases, so ranking and benchmark
-case quality remain active release work.
+The September 30 P0 run with real GitHub/npm and optional Web disabled passed
+2 of 5 relevance cases (Top-3 approved matching 40%). Ranking and benchmark
+case quality remain active release work; the approved baseline is unchanged.
 
 The 0.3.0 beta adds an optional Jev second-stage reranker and a source-linked
 agent handoff. Its API adapter and fallback are tested offline; no TypeSafe key

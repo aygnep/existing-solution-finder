@@ -74,3 +74,14 @@ describe('solution exporters', () => {
     expect(markdown).not.toContain('jev Relevance probability');
   });
 });
+
+  it('redacts direct export inputs and keeps non-secret source links intact', () => {
+    const secret = 'ghp_fakeCredential123456789';
+    for (const render of [renderAgentSkill, renderSolutionReport]) {
+      const output = render({ request: { ...request, problem: `token=${secret}` },
+        candidates: [{ ...solution, evidence: [{ ...solution.evidence[0]!, excerpt: `api_key=${secret}` }] }] });
+      expect(output).not.toContain(secret);
+      expect(output).toContain('[REDACTED]');
+      expect(output).toContain(solution.url);
+    }
+  });

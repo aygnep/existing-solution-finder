@@ -45,7 +45,9 @@ npm run test:watch   # Run tests in watch mode
 npm run lint         # ESLint
 npm run typecheck    # TypeScript type check
 npm run dev          # Watch mode compilation
-npm run web:dev      # Local Web Solution Guide
+npm run web:start    # Compiled local Web Solution Guide
+npm run web:dev      # Vite development only
+npm run verify:package # Isolated tarball installation and smoke verification
 ```
 
 ## Architecture

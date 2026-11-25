@@ -141,3 +141,9 @@ describe('parseProblem', () => {
     });
   });
 });
+
+  it('does not infer Go from substrings and preserves framework/runtime versions', () => {
+    const parsed = parseProblem('diagnostic category Node.js 22.12 Vite 7.1 SSR');
+    expect(parsed.stackNames).not.toContain('Go');
+    expect(parsed.versions).toEqual(expect.arrayContaining(['Node.js 22.12', 'Vite 7.1']));
+  });

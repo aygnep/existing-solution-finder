@@ -1,3 +1,4 @@
+import { parseProblem } from '../src/core/problem-parser';
 import { scoreCandidate, scoreAndAttach } from '../src/core/scorer';
 import { formatMatchReason, formatSafetyWarning } from '../src/core/candidate-presentation';
 import { rankCandidates } from '../src/core/ranker';
@@ -490,3 +491,11 @@ describe('scoreCandidate', () => {
     });
   });
 });
+
+  it('scores explicit module interop evidence above a generic runtime keyword match', () => {
+    const problem = parseProblem('Node.js ECMAScript module interop package');
+    const base = { id: 'fixture', url: 'https://example.com/module', provider: 'npm' as const, metadata: {} };
+    const specific = scoreCandidate({ ...base, name: 'module-interop-helper', description: 'ECMAScript module interoperability' }, problem);
+    const generic = scoreCandidate({ ...base, name: 'generic-runtime', description: 'Node.js package helper' }, problem);
+    expect(specific.breakdown.exactErrorMatch).toBeGreaterThan(generic.breakdown.exactErrorMatch);
+  });

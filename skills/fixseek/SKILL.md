@@ -46,3 +46,14 @@ fixseek feedback --problem "original problem" --candidate-url "https://source.ex
 ```
 
 Outcomes are `useful`, `not-useful`, and `unsafe`. If a validation fails, include the attempted change and new error in any follow-up search. Outcome records are local feedback; the current ranker does not use them automatically.
+
+## Local package operation
+
+Fixseek requires Node.js 22.12 or newer. Use `fixseek doctor` for an offline
+runtime/configuration check; it reports credential presence, not values or
+connectivity. An installed local archive includes the compiled Web workbench:
+run `fixseek-web`, open http://127.0.0.1:4174, and stop with Ctrl+C. See
+`docs/LOCAL_INSTALL.md` in the package for configuration and skill installation.
+Problem, stack, constraints, provider excerpts, and exports use shared
+credential redaction. Review input before sending it: pattern matching cannot
+recognize every secret format.
